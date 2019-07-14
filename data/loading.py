@@ -3,6 +3,13 @@ from tqdm import tqdm
 import environment.library as library
 
 
+def cudit(x):
+    if torch.cuda.is_available():
+        return x.cuda()
+    else:
+        return x
+
+
 HUMAN_TEST_MAPS = {
     'local': [18,20,21,22,23,24,25,26,27,49,53,20,30,40,50,35,45,46,47],
     'global': [20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,60,61,62,63,64,65,66,67,68,69,110,111,112,113,114,115,116,117,118,119]
@@ -19,17 +26,17 @@ def load(mode, data, num_train, num_test):
 
         print '\n<Data> Loading {} train environments with human annotations'.format(mode)
         train = build_turk_observations_unified(turk_path, annotation_path, num_train, states, test_maps, test = False)
-        
+
         print '\n<Data> Loading {} test environments with human annotations'.format(mode)
         test = build_turk_observations_unified(turk_path, annotation_path, num_test, states, test_maps, test = True)
-         
-    
-    elif data == 'synthetic':
-        raise RuntimeError('synthetic data is not cleaned up yet -- check back in a few days!')
-        layouts, objects, rewards, terminal, instructions, values, goals = build_reinforce_observations_unified(turk_path, range(num_train), states)
-        pdb.set_trace()
 
-        val_layouts, val_objects, val_rewards, val_terminal, val_instructions, val_values, val_goals = decomposition.build_reinforce_observations_unified(args.test_path, range(args.num_test), states)
+
+    elif data == 'synthetic':
+        # raise RuntimeError('synthetic data is not cleaned up yet -- check back in a few days!')
+        train = build_reinforce_observations_unified(turk_path, range(num_train), states)
+        # pdb.set_trace()
+
+        test = build_reinforce_observations_unified(turk_path, range(num_test), states)
 
     return train, test
 
@@ -73,7 +80,7 @@ def to_tensor(data, text_vocab):
     # object_vocab_size = len( np.unique(train_objects) )
     # text_vocab = pipeline.word_indices(full_instructions)
     ## add 1 for 0-padding
-    # text_vocab_size = len(text_vocab) + 1 
+    # text_vocab_size = len(text_vocab) + 1
     indices = instructions_to_indices(instructions, text_vocab)
     # val_indices = pipeline.instructions_to_indices(val_instructions, text_vocab)
 
@@ -85,13 +92,13 @@ def to_tensor(data, text_vocab):
     # num_loaded = turk_layouts.shape[0]
     # num_test = int(num_loaded * args.test_split)
 
-    layouts = torch.Tensor(layouts).long().cuda()
-    objects = torch.Tensor(objects).long().cuda()
-    rewards = torch.Tensor(rewards).cuda()
-    terminal = torch.Tensor(terminal).cuda()
-    indices = torch.Tensor(indices).long().cuda()
-    values = torch.Tensor(values).cuda()
-    goals = torch.Tensor(goals).cuda()
+    layouts = cudit(torch.Tensor(layouts).long())
+    objects = cudit(torch.Tensor(objects).long())
+    rewards = cudit(torch.Tensor(rewards))
+    terminal = cudit(torch.Tensor(terminal))
+    indices = cudit(torch.Tensor(indices).long())
+    values = cudit(torch.Tensor(values))
+    goals = cudit(torch.Tensor(goals))
     # instructions = train_instructions
 
     # if args.num_synthetic > 0:
@@ -117,7 +124,7 @@ def to_tensor(data, text_vocab):
     #     num_synth = synth_indices.size(0)
     #     synth_length = synth_indices.size(1)
     #     synth_indices = torch.cat( (torch.zeros(num_synth, turk_length-synth_length).long().cuda(), synth_indices), 1)
-       
+
     #     indices = torch.cat( (indices, synth_indices), 0)
 
     # val_layouts = torch.Tensor(val_layouts).long().cuda()
@@ -184,7 +191,7 @@ def initialize_states(data_path):
     return states, states_dict
 
 '''
-Returns a two-channel state observation 
+Returns a two-channel state observation
 where the first channel marks grass positions with 1's
 and puddle positions with 0's
 and the second channel marks the agent position with a 2
@@ -247,7 +254,7 @@ def build_state_observations(data_path, worlds_list, states, states_dict, state_
     return state_obs
 
 '''
-returns layouts (w/ position), objects, instructions, and values 
+returns layouts (w/ position), objects, instructions, and values
 '''
 def build_value_observations_unified(data_path, worlds_list, states, state_channels = 2, goal_channels = 1, verbose = True):
     num_states = len(states)
@@ -277,14 +284,14 @@ def build_value_observations_unified(data_path, worlds_list, states, state_chann
 
     return state_obs, object_obs, instruct_obs, value_obs, goals_obs
 
-def build_reinforce_observations_unified(data_path, worlds_list, states, state_channels = 2, goal_channels = 1, verbose = True):
+def build_reinforce_observations_unified(data_path, worlds_list, states, state_channels = 1, goal_channels = 1, verbose = True):
     num_states = len(states)
     state_size = int(math.sqrt(num_states))
 
-    state_obs = np.zeros( (0, state_channels, state_size, state_size) )
-    object_obs = np.zeros( (0, goal_channels, state_size, state_size) )
-    reward_obs = np.zeros( (0, 1, state_size, state_size) )
-    terminal_obs = np.zeros( (0, 1, state_size, state_size) )
+    state_obs = np.zeros((0, state_channels, state_size, state_size))
+    object_obs = np.zeros((0, goal_channels, state_size, state_size))
+    reward_obs = np.zeros((0, 1, state_size, state_size))
+    terminal_obs = np.zeros((0, 1, state_size, state_size))
 
     instruct_obs = []
     value_obs = []
@@ -332,7 +339,7 @@ def build_single(path, state_channels, goal_channels):
     goal_obs = []
 
     objects = reconstruct_goal(world)
-    
+
     count = 0
     for goal_ind, goal in enumerate(goals):
         val_map = values[goal_ind].flatten()
@@ -352,6 +359,7 @@ def build_single(path, state_channels, goal_channels):
     assert count == num_goals * num_states
     return state_obs, object_obs, instruct_obs, value_obs, goal_obs
 
+
 def build_reinforce_single(path, state_channels, goal_channels):
     info = pickle.load( open(path, 'r') )
     world = info['map']
@@ -364,6 +372,7 @@ def build_reinforce_single(path, state_channels, goal_channels):
     num_goals = len(goals)
     states = [(i,j) for i in range(world.shape[0]) for j in range(world.shape[1])]
     num_states = len(states)
+
     state_size = world.shape[0] ## assuming square states
     assert world.shape[0] == world.shape[1]
 
@@ -377,7 +386,7 @@ def build_reinforce_single(path, state_channels, goal_channels):
     goal_obs = []
 
     objects = reconstruct_goal(world)
-    
+
     count = 0
     for goal_ind, goal in enumerate(goals):
         val_map = values[goal_ind].flatten()
@@ -386,7 +395,7 @@ def build_reinforce_single(path, state_channels, goal_channels):
         terminal = terminal_maps[goal_ind]
 
         for pos_ind, position in enumerate(states):
-            state = reconstruct_state(world, position)
+            state = reconstruct_state(world, position)[0][np.newaxis,np.newaxis,:,:]
             val = val_map[pos_ind]
 
             object_obs[count] = objects
@@ -397,9 +406,11 @@ def build_reinforce_single(path, state_channels, goal_channels):
             instruct_obs.append( instr )
             value_obs.append( val )
             goal_obs.append( goal )
+            # pdb.set_trace()
 
             count += 1
     assert count == num_goals * num_states
+    # pdb.set_trace()
     return state_obs, object_obs, reward_obs, terminal_obs, instruct_obs, value_obs, goal_obs
 
 def build_turk_observations_unified(data_path, turk_path, num_worlds, states, test_maps, test = False, state_channels = 1, goal_channels = 1, verbose = True):
@@ -426,14 +437,17 @@ def build_turk_observations_unified(data_path, turk_path, num_worlds, states, te
     for key in keys:
         world_num, goal_num = key
 
-        if (test and world_num not in test_maps) or (not test and world_num in test_maps): 
+        if (test and world_num not in test_maps) or (not test and world_num in test_maps):
+            # raise ValueError('probably not what you wanted 1')
             continue
         if len(annotations[key]) < 5:
+            # raise ValueError('probably not what you wanted 2')
             continue
         _, instr, actual_goal, annotated_goal, accuracy = annotations[key]
-        
+
         full_path = os.path.join(data_path, str(world_num) + '.p')
         if accuracy == 'wrong' or actual_goal != annotated_goal:
+            # raise ValueError('probably not what you wanted 3')
             continue
         else:
             progress.update(1)
@@ -454,6 +468,7 @@ def build_turk_observations_unified(data_path, turk_path, num_worlds, states, te
 
     # if count < num_worlds - 1:
         # print 'Only found {} annotations, breaking'.format(count)
+    # pdb.set_trace()
     sys.stdout.flush()
     print '<Data> Found {} annotations'.format(count)
     return state_obs, object_obs, reward_obs, terminal_obs, instruct_obs, value_obs, goals_obs
@@ -500,7 +515,7 @@ def build_turk_single(path, goal, state_channels, goal_channels):
     # goal_obs = []
 
     # objects = reconstruct_goal(world)
-    
+
     # count = 0
     # for goal_ind, goal in enumerate(goals):
     #     val_map = values[goal_ind].flatten()
@@ -545,7 +560,7 @@ def build_mdp(data_path, worlds_list, MDP):
 
 
 '''
-returns 
+returns
 1. np array of size (len(worlds_list) * 400) x goal_obs.shape
 2. list of instructions for each goal
 3. target embedding for each goal
@@ -568,7 +583,7 @@ def build_goal_observations(data_path, worlds_list, states_dict, V = None, goal_
     for world_num in worlds_list:
         path = os.path.join(data_path, str(world_num) + '.p')
         info = pickle.load( open(path, 'r') )
-        
+
         world = info['map']
         goals = info['goals']
         vals = info['values']
@@ -605,7 +620,7 @@ def build_test_values(data_path, worlds_list, states):
 
 '''
 test_set[world_num] = (state_obs, goal_obs, instruct_obs, values)
-where state_obs is state at every position, 
+where state_obs is state at every position,
 goal_obs is the same object observation repeated len(instruct_obs) times
 instruct_obs is a list of instructions for the map in state_obs
 and values is a np array of len(instruct_obs) x num_states
@@ -671,6 +686,3 @@ def simulation_set_indices(test_set, index_fn, index_mapping):
         # print len(instruct_obs), instruct_inds.shape
         new_test[key] = (state_obs, goal_obs, instruct_obs, instruct_inds, values, mdps)
     return new_test
-
-
-

@@ -1,5 +1,5 @@
 import models
-
+import torch
 '''
 norbf (full), nobases (no gradient), nonsep
 uvfa-pos, uvfa-text, cnn+lstm
@@ -11,6 +11,13 @@ no gradient: noglobal
 no rbf / gradient: nobases
 no cnn: nocnn
 '''
+
+def cudit(x):
+    if torch.cuda.is_available():
+        return x.cuda()
+    else:
+        return x
+
 
 def init(args, layout_vocab_size, object_vocab_size, text_vocab_size):
     if args.model == 'full': ## new
@@ -34,28 +41,28 @@ def init_full(args, layout_vocab_size, object_vocab_size, text_vocab_size):
     args.attention_in_dim = args.obj_embed
     args.lstm_out = args.attention_in_dim * args.attention_out_dim * args.attention_kernel**2 + args.global_coeffs
 
-    state_model = models.LookupModel(layout_vocab_size, args.state_embed).cuda()
+    state_model = cudit(models.LookupModel(layout_vocab_size, args.state_embed))
     object_model = models.LookupModel(object_vocab_size, args.obj_embed)
 
     text_model = models.TextModel(text_vocab_size, args.lstm_inp, args.lstm_hid, args.lstm_layers, args.lstm_out)
-    heatmap_model = models.AttentionGlobal(text_model, args, map_dim=args.map_dim).cuda()
+    heatmap_model = cudit(models.AttentionGlobal(text_model, args, map_dim=args.map_dim))
 
-    model = models.MultiNoRBF(state_model, object_model, heatmap_model, args, map_dim=args.map_dim).cuda()
-    return model    
+    model = cudit(models.MultiNoRBF(state_model, object_model, heatmap_model, args, map_dim=args.map_dim))
+    return model
 
 
 def init_nogradient(args, layout_vocab_size, object_vocab_size, text_vocab_size):
     args.global_coeffs = 0
     args.attention_in_dim = args.obj_embed
     args.lstm_out = args.attention_in_dim * args.attention_out_dim * args.attention_kernel**2
-    
-    state_model = models.LookupModel(layout_vocab_size, args.state_embed).cuda()
+
+    state_model = cudit(models.LookupModel(layout_vocab_size, args.state_embed))
     object_model = models.LookupModel(object_vocab_size, args.obj_embed)
 
     text_model = models.TextModel(text_vocab_size, args.lstm_inp, args.lstm_hid, args.lstm_layers, args.lstm_out)
-    heatmap_model = models.AttentionHeatmap(text_model, args, map_dim=args.map_dim).cuda()
+    heatmap_model = cudit(models.AttentionHeatmap(text_model, args, map_dim=args.map_dim))
 
-    model = models.MultiNoBases(state_model, object_model, heatmap_model, args, map_dim=args.map_dim).cuda()
+    model = cudit(models.MultiNoBases(state_model, object_model, heatmap_model, args, map_dim=args.map_dim))
     return model
 
 
@@ -68,7 +75,7 @@ def init_cnn_lstm(args, layout_vocab_size, object_vocab_size, text_vocab_size):
 
     lstm = models.TextModel(text_vocab_size, args.lstm_inp, args.lstm_hid, args.lstm_layers, args.lstm_out)
 
-    model = models.CNN_LSTM(state_model, object_model, lstm, args).cuda()
+    model = cudit(models.CNN_LSTM(state_model, object_model, lstm, args))
     return model
 
 
@@ -80,7 +87,7 @@ def init_uvfa_text(args, layout_vocab_size, object_vocab_size, text_vocab_size, 
     args.lstm_out = rank
 
     text_model = models.TextModel(text_vocab_size, args.lstm_inp, args.lstm_hid, args.lstm_layers, args.lstm_out)
-    model = models.UVFA_text(text_model, layout_vocab_size, object_vocab_size, args, map_dim=args.map_dim).cuda()
+    model = cudit(models.UVFA_text(text_model, layout_vocab_size, object_vocab_size, args, map_dim=args.map_dim))
     return model
 
 
@@ -91,10 +98,5 @@ def init_uvfa_pos(args, layout_vocab_size, object_vocab_size, text_vocab_size, r
     args.rank = rank
     args.lstm_out = rank
 
-    model = models.UVFA_pos(layout_vocab_size, object_vocab_size, args, map_dim=args.map_dim).cuda()
+    model = cudit(models.UVFA_pos(layout_vocab_size, object_vocab_size, args, map_dim=args.map_dim))
     return model
-
-
-
-
-

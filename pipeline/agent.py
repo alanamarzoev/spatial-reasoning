@@ -2,6 +2,13 @@ import math, numpy as np, copy, pdb
 import torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
 from torch.autograd import Variable
 
+
+def cudit(x):
+    if torch.cuda.is_available():
+        return x.cuda()
+    else:
+        return x
+
 class Agent:
 
     def __init__(self, network, target_network, lr=0.01, learn_start = 1000, batch_size = 32, map_dim = 10, gamma = 0.95, replay_size = 10000, instr_len = 7, layout_channels = 1, object_channels = 1):
@@ -25,9 +32,9 @@ class Agent:
         self.N = N
         self.states = self._get_states(M, N)
         self.children = self._get_children(M, N)
-        self.replay_layouts = torch.Tensor(self.replay_size, self.layout_channels, M, N).long().cuda()
-        self.replay_objects = torch.Tensor(self.replay_size, self.object_channels, M, N).long().cuda()
-        self.replay_indices = torch.Tensor(self.replay_size, self.instr_len).long().cuda()
+        self.replay_layouts = cudit(torch.Tensor(self.replay_size, self.layout_channels, M, N).long())
+        self.replay_objects = cudit(torch.Tensor(self.replay_size, self.object_channels, M, N).long())
+        self.replay_indices = cudit(torch.Tensor(self.replay_size, self.instr_len).long())
         self.replay_trajectories = [0 for i in range(self.replay_size)]
         self.replay_pointer = 0
         self.replay_filled = 0
@@ -51,7 +58,7 @@ class Agent:
 
     '''
     for each state (i,j) in states, returns a list
-    of neighboring states with approximated values 
+    of neighboring states with approximated values
     in descending order
     '''
     def _get_policy(self, values):
@@ -74,8 +81,8 @@ class Agent:
 
 
     def _get_targets(self, value_preds, trajectories):
-        targets = torch.zeros(value_preds.size()).cuda()
-        masks = torch.zeros(value_preds.size()).cuda()
+        targets = cudit(torch.zeros(value_preds.size()))
+        masks = cudit(torch.zeros(value_preds.size()))
         batch_size = value_preds.size(0)
         for b in range(batch_size):
             targ, mask = self._get_targets_single(value_preds[b], trajectories[b])
@@ -114,7 +121,7 @@ class Agent:
         # print 'batch: ', batch_size, 'copy: ', copy_len
         start = self.replay_pointer
         end = self.replay_pointer + copy_len
-        # print 'start: ', start, 'end: ', end
+        # pdb.set_trace()
         self.replay_layouts[start:end] = layouts.data.clone()[:copy_len]
         self.replay_objects[start:end] = objects.data.clone()[:copy_len]
         self.replay_indices[start:end] = indices.data.clone()[:copy_len]
@@ -203,7 +210,7 @@ class Agent:
             pos = reachable[selected]
             visited.add(pos)
             # print 'position: ', pos
-        # print 'traj: ', len(trajectory), 'rew: ', total_reward 
+        # print 'traj: ', len(trajectory), 'rew: ', total_reward
         return trajectory, total_reward
 
     def _get_size(self, inputs):
@@ -219,19 +226,19 @@ class Agent:
         if batch_size == None:
             batch_size = self.batch_size
 
-        inds = torch.floor(torch.rand(batch_size) * data_size).long().cuda()
+        inds = cudit(torch.floor(torch.rand(batch_size) * data_size).long())
         # bug: floor(rand()) sometimes gives 1
         inds[inds >= data_size] = data_size - 1
 
         if type(inputs) == tuple:
-            inp = tuple([Variable( i.index_select(0, inds).cuda(), volatile=volatile ) for i in inputs])
+            inp = tuple([Variable( cudit(i.index_select(0, inds)), volatile=volatile ) for i in inputs])
         else:
-            inp = Variable( inputs.index_select(0, inds).cuda(), volatile=volatile )
+            inp = Variable( cudit(inputs.index_select(0, inds)), volatile=volatile )
 
         if type(targets) == list:
             targ = [targets[ind] for ind in inds]
         elif targets != None:
-            targ = Variable( targets.index_select(0, inds).cuda(), volatile=volatile )
+            targ = Variable( cudit(targets.index_select(0, inds)), volatile=volatile )
         else:
             targ = None
 
@@ -247,7 +254,7 @@ class Agent:
         for i in range(num_batches):
             inp, traj = self._get_batch(inputs, trajectories)
             self.optimizer.zero_grad()
-            
+
             ## get predictions from the network
             ## and target network
             map_pred = self.network.forward(inp)
@@ -277,7 +284,7 @@ class Agent:
         return (i, j)
 
     '''
-    add num_environments environments 
+    add num_environments environments
     to the replay memory
     '''
     def act(self, mdp, num_environments):
@@ -286,12 +293,12 @@ class Agent:
         for i in range(num_batches):
             ## don't need gradients for simulation
             (lay, obj, ind, rew, term), _ = self._get_batch(mdp, None, volatile = True)
-            
+
             ## get value estimations
             inputs = (lay, obj, ind)
             values = self.network(inputs)
 
-            ## add inputs (layouts, objects, indices) 
+            ## add inputs (layouts, objects, indices)
             ## and trajectories to replay memory
             trajectories, score = self.simulate(values, rew, term)
             self.fill_replay(inputs, trajectories)
@@ -332,15 +339,6 @@ class Agent:
 
         # pdb.set_trace()
 
-
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
     batch = 5
     dim = 10
@@ -353,11 +351,3 @@ if __name__ == '__main__':
 
     agent = Agent(network)
     agent.simulate(worlds, rewards, terminals)
-
-
-
-
-
-
-
-

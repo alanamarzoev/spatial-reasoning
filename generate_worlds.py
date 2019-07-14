@@ -6,7 +6,7 @@ import environment, utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--lower', type=int, default=0)
-parser.add_argument('--num_worlds', type=int, default=10)
+parser.add_argument('--num_worlds', type=int, default=1000)
 parser.add_argument('--vis_path', type=str, default='data/example_vis/')
 parser.add_argument('--save_path', type=str, default='data/example_env/')
 parser.add_argument('--dim', type=int, default=10)
@@ -32,10 +32,13 @@ elif args.mode == 'global':
 
 for outer in range(args.lower, args.lower + args.num_worlds):
     info = gen.new()
+    # print("GENERATED INFO: {}".format(info))
     configurations = len(info['rewards'])
 
     print 'Generating map', outer, '(', configurations, 'configuations )'
-    sys.stdout.flush()
+    # sys.stdout.flush()
+
+    # print("gen world 1")
 
     world = info['map']
     rewards = info['rewards']
@@ -45,10 +48,12 @@ for outer in range(args.lower, args.lower + args.num_worlds):
     sprite = environment.SpriteFigure(environment.figure_library.objects, environment.figure_library.background, dim=args.sprite_dim)
     sprite.makeGrid(world, args.vis_path + str(outer) + '_sprites')
 
+    print("gen world 2")
+
     for inner in tqdm(range(configurations)):
         reward_map = rewards[inner]
         terminal_map = terminal[inner]
-
+        print("gen world 3")
         mdp = environment.MDP(world, reward_map, terminal_map)
         vi = environment.ValueIteration(mdp)
 
@@ -60,5 +65,3 @@ for outer in range(args.lower, args.lower + args.num_worlds):
     info['values'] = values
     filename = os.path.join( args.save_path, str(outer) + '.p' )
     pickle.dump( info, open( filename, 'wb' ) )
-
-

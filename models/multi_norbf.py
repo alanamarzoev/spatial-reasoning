@@ -7,16 +7,24 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import models, utils
 
+
+def cudit(x):
+    if torch.cuda.is_available():
+        return x.cuda()
+    else:
+        return x
+
+
 class MultiNoRBF(nn.Module):
     def __init__(self, state_model, object_model, heatmap_model, args, map_dim = 10):
         super(MultiNoRBF, self).__init__()
-        
+
         self.state_model = state_model
         self.object_model = object_model
         self.heatmap_model = heatmap_model
-        self.simple_conv = models.SimpleConv(3).cuda()
-        self.rbf = Variable( utils.meta_rbf(map_dim).cuda() )
-        self.positions = Variable( self.__init_positions(map_dim).cuda() )
+        self.simple_conv = cudit(models.SimpleConv(3))
+        self.rbf = cudit(Variable( utils.meta_rbf(map_dim)))
+        self.positions = cudit(Variable( self.__init_positions(map_dim)))
 
         self.map_dim = map_dim
         self.batch_size = args.batch_size
@@ -33,11 +41,11 @@ class MultiNoRBF(nn.Module):
 
         coeffs_batch = pos_coeffs.unsqueeze(-1).unsqueeze(-1).repeat(1,1,self.map_dim,self.map_dim)
         bias_batch = bias.unsqueeze(1).unsqueeze(1).unsqueeze(1).repeat(1,1,self.map_dim,self.map_dim)
-        
+
         ## sum over row, col and add bias
         obj_global = (coeffs_batch * self.positions_batch).sum(1, keepdim=True) + bias_batch
         return obj_global
-        
+
 
 
     def __init_positions(self, map_dim):
@@ -61,14 +69,14 @@ class MultiNoRBF(nn.Module):
 
         # print 'state_out: ', state_out.size()
         # print 'obj_out: ', obj_out.size()
-        
+
         ## get object map
         heatmap, global_coeffs = self.heatmap_model((obj_out, text))
-        
+
         ## repeat heatmap for multiplication by rbf batch
         # heatmap_batch = heatmap.view(self.batch_size,self.map_dim**2,1,1).repeat(1,1,self.map_dim,self.map_dim)
-        
-        ## multiply object map by pre-computed manhattan rbf 
+
+        ## multiply object map by pre-computed manhattan rbf
         ## < batch x size^2 x size x size >
         # obj_local = heatmap_batch * self.rbf_batch
         ## sum contributions from rbf from every source
@@ -91,16 +99,3 @@ class MultiNoRBF(nn.Module):
         # map_pred = state_out + obj_out
 
         return map_pred
-
-
-
-
-
-
-
-
-
-
-
-
-

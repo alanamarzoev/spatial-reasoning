@@ -7,23 +7,29 @@ from torch.autograd import Variable
 from torch.nn.modules.utils import _pair
 import pdb, pickle
 
+def cudit(x):
+    if torch.cuda.is_available():
+        return x.cuda()
+    else:
+        return x
+
 class ConstraintFactorizer(nn.Module):
     def __init__(self, sparse_value_mat, rank, dissimilarity_lambda, world_lambda, location_lambda):
         super(ConstraintFactorizer, self).__init__()
         self.M, self.N = sparse_value_mat.shape
-        self.mat = Variable( torch.Tensor(sparse_value_mat).cuda() )
+        self.mat = cudit(Variable(torch.Tensor(sparse_value_mat)))
         self.mask = (self.mat == 0)
         self.rank = rank
         # print self.M, self.N
         self.M_embed = nn.Embedding(self.M, self.rank)
         self.N_embed = nn.Embedding(self.N, self.rank)
-        self.M_inp = Variable( torch.range(0, self.M-1).cuda().long() )
-        self.N_inp = Variable( torch.range(0, self.N-1).cuda().long() )
+        self.M_inp = cudit(Variable( torch.range(0, self.M-1))).long()
+        self.N_inp = cudit(Variable( torch.range(0, self.N-1))).long() 
         self.dim = int(math.sqrt(self.N))
 
         # self.conv_kernel = torch.ones(1,self.rank,3,3)/8./self.rank
         # self.conv_kernel[:,:,1,1] = -1./self.rank
-        self.conv_kernel = Variable( self.avg_conv(self.rank).cuda() )
+        self.conv_kernel = Variable( cudit(self.avg_conv(self.rank)) )
         self.conv_bias = None
         self.stride = _pair(1)
         self.padding = _pair(1)
@@ -35,7 +41,7 @@ class ConstraintFactorizer(nn.Module):
         # print 'BEFORE PARAMETER:'
         # print self.conv_kernel
         # pdb.set_trace()
-        # self.param = self.conv_kernel 
+        # self.param = self.conv_kernel
         # print 'CONV KERNEL:'
         # print self.param
         # self.conv_kernel = self.conv_kernel.cuda()
@@ -73,7 +79,7 @@ class ConstraintFactorizer(nn.Module):
         # print out
         # print self.mat
         diff = torch.pow(out - self.mat, 2)
-        mse = diff.sum() 
+        mse = diff.sum()
 
         ## 1 x M x N x rank
         layout = columns.view(self.dim,self.dim,self.rank).unsqueeze(0)
@@ -214,7 +220,7 @@ if __name__ == '__main__':
     dissimilarity_lambda = .1
     world_lambda = 0
     location_lambda = .001
-    model = ConstraintFactorizer(value_mat, rank, dissimilarity_lambda, world_lambda, location_lambda).cuda()
+    model = cudit(ConstraintFactorizer(value_mat, rank, dissimilarity_lambda, world_lambda, location_lambda))
     lr = 0.001
     iters = 500000
     U, V, recon = model.train(lr, iters)
@@ -276,4 +282,3 @@ if __name__ == '__main__':
 
     # # print out[0][0][0]
     # # print out[1][0][0]
-
