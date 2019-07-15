@@ -6,8 +6,8 @@ import pdb
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--save_path', type=str, default='logs/trial')
-parser.add_argument('--max_train', type=int, default=10)
-parser.add_argument('--max_test', type=int, default=1)
+parser.add_argument('--max_train', type=int, default=1000)
+parser.add_argument('--max_test', type=int, default=100)
 
 parser.add_argument('--mode', type=str, default='local', choices=['local', 'global'])
 parser.add_argument('--annotations', type=str, default='human', choices=['synthetic', 'human'])
@@ -47,6 +47,8 @@ train_layouts, train_objects, train_rewards, train_terminal, \
 
 test_layouts, test_objects, test_rewards, test_terminal, \
     test_instructions, test_indices, test_values, test_goals = data.to_tensor(test_data, text_vocab)
+
+# pdb.set_trace()
 
 print '<Main> Training:', train_layouts.size(), 'x', train_objects.size(), 'x', train_indices.size()
 print '<Main> Rewards: ', train_rewards.size(), '    Terminal: ', train_terminal.size()

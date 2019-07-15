@@ -34,7 +34,7 @@ class Agent:
         self.children = self._get_children(M, N)
         self.replay_layouts = cudit(torch.Tensor(self.replay_size, self.layout_channels, M, N).long())
         self.replay_objects = cudit(torch.Tensor(self.replay_size, self.object_channels, M, N).long())
-        self.replay_indices = cudit(torch.Tensor(self.replay_size, self.instr_len).long())
+        self.replay_indices = cudit(torch.Tensor(self.replay_size, self.instr_len))
         self.replay_trajectories = [0 for i in range(self.replay_size)]
         self.replay_pointer = 0
         self.replay_filled = 0
@@ -245,6 +245,7 @@ class Agent:
         return inp, targ
 
     def _epoch(self, inputs, trajectories, train_size):
+        # pdb.set_trace()
         # print 'training with: ', [i.size() for i in inputs], len(trajectories)
         self.network.train()
         # data_size = self._get_size(inputs)
@@ -257,7 +258,7 @@ class Agent:
 
             ## get predictions from the network
             ## and target network
-            pdb.set_trace()
+            # pdb.set_trace()
             map_pred = self.network.forward(inp)
             map_targ = self.target_network.forward(inp)
 
@@ -297,12 +298,12 @@ class Agent:
 
             ## get value estimations
             inputs = (lay, obj, ind)
-            print("here1")
+            # print("here1")
             values = self.network(inputs)
 
             ## add inputs (layouts, objects, indices)
             ## and trajectories to replay memory
-            print("here2")
+            # print("here2")
             trajectories, score = self.simulate(values, rew, term)
             self.fill_replay(inputs, trajectories)
             score_sum += score

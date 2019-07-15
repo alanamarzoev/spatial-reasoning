@@ -107,7 +107,7 @@ def to_tensor(data, text_vocab):
     objects = cudit(torch.Tensor(objects).long())
     rewards = cudit(torch.Tensor(rewards))
     terminal = cudit(torch.Tensor(terminal))
-    indices = cudit(torch.Tensor(indices).long())
+    indices = cudit(torch.Tensor(indices))
     values = cudit(torch.Tensor(values))
     goals = cudit(torch.Tensor(goals))
     # instructions = train_instructions
