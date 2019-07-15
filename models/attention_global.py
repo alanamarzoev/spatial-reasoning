@@ -3,6 +3,7 @@
 ## but just as a kernel for convolution
 
 import math, pdb
+import numpy as np
 import torch, torch.nn as nn, torch.nn.functional as F
 import custom
 
@@ -10,7 +11,7 @@ class AttentionGlobal(nn.Module):
 # args.lstm_out, args.goal_hid, args.rank, args.obj_embed
     def __init__(self, text_model, args, map_dim = 10):
         super(AttentionGlobal, self).__init__()
-        
+
         assert args.attention_kernel % 2 == 1
 
         self.text_model = text_model
@@ -18,8 +19,9 @@ class AttentionGlobal(nn.Module):
 
         self.embed_dim = args.attention_in_dim
         self.kernel_out_dim = args.attention_out_dim
-        self.kernel_size = args.attention_kernel 
+        self.kernel_size = args.attention_kernel
         self.global_coeffs = args.global_coeffs
+        self.reshape_embeddings = torch.nn.Linear(4096, 264)
 
         padding = int(math.ceil(self.kernel_size/2.)) - 1
         self.conv_custom = custom.ConvKernel(self.embed_dim, self.kernel_out_dim, self.kernel_size, bias=False, padding=padding)
@@ -35,13 +37,20 @@ class AttentionGlobal(nn.Module):
     def forward(self, inp):
         (embeddings, text) = inp
         batch_size = embeddings.size(0)
-        text = text.transpose(0,1)
-        hidden = self.text_model.init_hidden(batch_size)
-
+        # text = text.transpose(0,1)
+        # hidden = self.text_model.init_hidden(batch_size)
         # embeddings = self.object_model.forward(obj)
         # print embeddings.size()
-        
-        lstm_out = self.text_model.forward(text, hidden)
+
+        # lstm_out = self.text_model.forward(text, hidden)
+
+        # test = np.zeros((1, 1024))
+        # t = torch.as_tensor(test)
+        # pdb.set_trace()
+        # lstm_out = text
+        # pdb.set_trace()
+        print("hi")
+        lstm_out = torch.nn.Linear(4096, 264)(text).reshape(4, 66)
         lstm_kernel = lstm_out[:,:-self.global_coeffs].contiguous()
         lstm_kernel = lstm_kernel.view(-1, self.kernel_out_dim, self.embed_dim, self.kernel_size, self.kernel_size)
         # print 'LSTM_OUT: ', lstm_out.size()
@@ -57,7 +66,7 @@ class AttentionGlobal(nn.Module):
         lstm_global = lstm_out[:,-self.global_coeffs:]
         # global_heatmap = self._global(lstm_global)
 
-        # out = local_heatmap + global_heatmap 
+        # out = local_heatmap + global_heatmap
         # print conv.size()
         # conv = conv.view(-1, self.reshape_dim)
 
@@ -123,11 +132,3 @@ if __name__ == '__main__':
     # obj_out = object_model.forward(obj_inp)
 
     # print obj_out.data.size()
-
-
-
-
-
-
-
-

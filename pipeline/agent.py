@@ -257,6 +257,7 @@ class Agent:
 
             ## get predictions from the network
             ## and target network
+            pdb.set_trace()
             map_pred = self.network.forward(inp)
             map_targ = self.target_network.forward(inp)
 
@@ -296,10 +297,12 @@ class Agent:
 
             ## get value estimations
             inputs = (lay, obj, ind)
+            print("here1")
             values = self.network(inputs)
 
             ## add inputs (layouts, objects, indices)
             ## and trajectories to replay memory
+            print("here2")
             trajectories, score = self.simulate(values, rew, term)
             self.fill_replay(inputs, trajectories)
             score_sum += score

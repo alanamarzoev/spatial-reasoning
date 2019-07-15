@@ -1,6 +1,7 @@
 import sys, os, math, pickle, numpy as np, torch, pdb
 from tqdm import tqdm
 import environment.library as library
+from bert_serving.client import BertClient
 
 
 def cudit(x):
@@ -65,6 +66,14 @@ def get_statistics(train_data, val_data):
 
     return layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab
 
+
+def get_bert_embeddings(instructions):
+    bc = BertClient()
+    embeddings = bc.encode(instructions)
+    # pdb.set_trace()
+    return embeddings
+
+
 def to_tensor(data, text_vocab):
     layouts, objects, rewards, terminal, instructions, values, goals = data
     # full_instructions = copy.deepcopy(train_instructions + val_instructions)
@@ -81,7 +90,9 @@ def to_tensor(data, text_vocab):
     # text_vocab = pipeline.word_indices(full_instructions)
     ## add 1 for 0-padding
     # text_vocab_size = len(text_vocab) + 1
-    indices = instructions_to_indices(instructions, text_vocab)
+    # indices = instructions_to_indices(instructions, text_vocab)
+    indices = get_bert_embeddings(instructions)
+    # pdb.set_trace()
     # val_indices = pipeline.instructions_to_indices(val_instructions, text_vocab)
 
     # print '\nVocabulary'

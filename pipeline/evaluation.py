@@ -39,13 +39,13 @@ def evaluate(model, test_set, savepath=None):
     count = 0
     for key, (state_obs, goal_obs, instruct_words, instruct_inds, targets) in test_set.iteritems():
         progress.update(1)
-        
+
         state = Variable( torch.Tensor(state_obs).long().cuda() )
         objects = Variable( torch.Tensor(goal_obs).long().cuda() )
         instructions = Variable( torch.Tensor(instruct_inds).long().cuda() )
         targets = torch.Tensor(targets)
         # print state.size(), objects.size(), instructions.size(), targets.size()
-        
+
         preds = model.forward( (state, objects, instructions) ).data.cpu()
 
         state_dim = 1
@@ -108,7 +108,7 @@ def simulate(model, sim_set):
         instructions = Variable( torch.Tensor(instruct_inds).long().cuda() )
         targets = torch.Tensor(targets)
         # print state.size(), objects.size(), instructions.size()
-        
+
         preds = model.forward(state, objects, instructions).data.cpu().numpy()
         # print 'sim preds: ', preds.shape
 
@@ -137,11 +137,3 @@ def simulate(model, sim_set):
     avg_steps = np.mean(steps_list)
     # print 'avg steps: ', avg_steps, len(steps_list), len(sim_set), num_goals
     return avg_steps
-
-
-
-
-
-
-
-
