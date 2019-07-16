@@ -2,6 +2,9 @@ import sys, os, math, pickle, numpy as np, torch, pdb
 from tqdm import tqdm
 import environment.library as library
 from bert_serving.client import BertClient
+import pickle
+import os.path
+from os import path
 
 
 def cudit(x):
@@ -67,14 +70,39 @@ def get_statistics(train_data, val_data):
     return layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab
 
 
-def get_bert_embeddings(instructions):
+def get_from_bert_service(instructions):
     bc = BertClient()
     embeddings = bc.encode(instructions)
-    # pdb.set_trace()
     return embeddings
 
 
-def to_tensor(data, text_vocab):
+def get_bert_embeddings(instructions, type):
+    to_encode = []
+    embeddings_file_name = "{}_bert_embeddings.p".format(type)
+
+    if path.exists(embeddings_file_name):
+        embed_dict = pickle.load( open( embeddings_file_name, "rb" ) )
+        embeddings = []
+
+        for insn in instructions:
+            if insn in embed_dict:
+                embeddings.append(embed_dict[insn])
+            else:
+                embeddings.append(get_from_bert_service([insn])[0])
+
+        pickle.dump( embed_dict, open( embeddings_file_name , "wb" ) )
+        return np.array(embeddings)
+    else:
+        embed_dict = dict()
+        embeddings = get_from_bert_service(instructions)
+        for i in range(len(embeddings)):
+            embed_dict[instructions[i]] = embeddings[i]
+        pickle.dump( embed_dict, open( embeddings_file_name , "wb" ) )
+
+        return embeddings
+
+
+def to_tensor(data, text_vocab, data_type):
     layouts, objects, rewards, terminal, instructions, values, goals = data
     # full_instructions = copy.deepcopy(train_instructions + val_instructions)
 
@@ -91,7 +119,9 @@ def to_tensor(data, text_vocab):
     ## add 1 for 0-padding
     # text_vocab_size = len(text_vocab) + 1
     # indices = instructions_to_indices(instructions, text_vocab)
-    indices = get_bert_embeddings(instructions)
+    print("here1")
+    indices = get_bert_embeddings(instructions, data_type)
+    print("here2")
     # pdb.set_trace()
     # val_indices = pipeline.instructions_to_indices(val_instructions, text_vocab)
 
@@ -102,7 +132,7 @@ def to_tensor(data, text_vocab):
     # print '\nConverting to tensors'
     # num_loaded = turk_layouts.shape[0]
     # num_test = int(num_loaded * args.test_split)
-
+    # pdb.set_trace()
     layouts = cudit(torch.Tensor(layouts).long())
     objects = cudit(torch.Tensor(objects).long())
     rewards = cudit(torch.Tensor(rewards))
