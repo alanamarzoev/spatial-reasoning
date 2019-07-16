@@ -88,7 +88,9 @@ def get_bert_embeddings(instructions, type):
             if insn in embed_dict:
                 embeddings.append(embed_dict[insn])
             else:
-                embeddings.append(get_from_bert_service([insn])[0])
+                embed = get_from_bert_service([insn])[0]
+                embeddings.append(embed)
+                embed_dict[insn] = embed 
 
         pickle.dump( embed_dict, open( embeddings_file_name , "wb" ) )
         return np.array(embeddings)
