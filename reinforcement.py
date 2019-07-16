@@ -7,7 +7,7 @@ import pdb
 parser = argparse.ArgumentParser()
 parser.add_argument('--save_path', type=str, default='logs/trial')
 parser.add_argument('--max_train', type=int, default=1000)
-parser.add_argument('--max_test', type=int, default=100)
+parser.add_argument('--max_test', type=int, default=200)
 
 parser.add_argument('--mode', type=str, default='local', choices=['local', 'global'])
 parser.add_argument('--annotations', type=str, default='human', choices=['synthetic', 'human'])

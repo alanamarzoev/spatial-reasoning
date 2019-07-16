@@ -68,7 +68,7 @@ def get_statistics(train_data, val_data):
 
 
 def get_bert_embeddings(instructions):
-    bc = BertClient(ip='128.30.10.112')
+    bc = BertClient()
     embeddings = bc.encode(instructions)
     # pdb.set_trace()
     return embeddings
