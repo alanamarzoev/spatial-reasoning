@@ -66,19 +66,15 @@ agent = pipeline.Agent(model,  target_model, map_dim = args.map_dim, instr_len =
                                 batch_size = args.batch_size, learn_start = args.learn_start,
                                 replay_size = args.replay_size, lr = args.lr, gamma = args.gamma)
 
-print("here3")
 
 train_inputs = (train_layouts, train_objects, train_indices)
-print("here4")
 
 test_inputs = (test_layouts, test_objects, test_indices)
-print("here5")
 
 ## train agent
 scores = agent.train( train_inputs, train_rewards, train_terminal,
                       test_inputs, test_rewards, test_terminal, epochs = args.epochs )
 
-print("here6")
 
 #################################
 ######## Save predictions #######
