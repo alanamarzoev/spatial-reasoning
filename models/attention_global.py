@@ -21,8 +21,7 @@ class AttentionGlobal(nn.Module):
         self.kernel_out_dim = args.attention_out_dim
         self.kernel_size = args.attention_kernel
         self.global_coeffs = args.global_coeffs
-        self.reshape_embeddings_1024_to_256 = torch.nn.Linear(1024, 128)
-        self.reshape_embeddings_256_to_66 = torch.nn.Linear(128, 66)
+        self.reshape_embeddings_1024_to_66 = torch.nn.Linear(1024, 66)
 
         padding = int(math.ceil(self.kernel_size/2.)) - 1
         self.conv_custom = custom.ConvKernel(self.embed_dim, self.kernel_out_dim, self.kernel_size, bias=False, padding=padding)
@@ -52,8 +51,10 @@ class AttentionGlobal(nn.Module):
         # pdb.set_trace()
         # print(text)
 
-        lstm_out = self.reshape_embeddings_256_to_66(F.relu(self.reshape_embeddings_1024_to_256(text)))
-        # lstm_out = self.reshape_embeddings(text)
+        # lstm_out = self.reshape_embeddings_256_to_66(F.relu(self.reshape_embeddings_1024_to_256(text)))
+        lstm_out = self.reshape_embeddings_1024_to_66(text)
+        # print("SHAPE LSTM OUT: {}".format(lstm_out.shape))
+        # pdb.set_trace()
         # lstm_out = text
         lstm_kernel = lstm_out[:,:-self.global_coeffs].contiguous()
         lstm_kernel = lstm_kernel.view(-1, self.kernel_out_dim, self.embed_dim, self.kernel_size, self.kernel_size)

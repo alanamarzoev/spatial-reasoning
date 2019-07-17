@@ -6,8 +6,8 @@ import pdb
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--save_path', type=str, default='logs/trial')
-parser.add_argument('--max_train', type=int, default=1000)
-parser.add_argument('--max_test', type=int, default=200)
+parser.add_argument('--max_train', type=int, default=5000)
+parser.add_argument('--max_test', type=int, default=500)
 
 parser.add_argument('--mode', type=str, default='local', choices=['local', 'global'])
 parser.add_argument('--annotations', type=str, default='human', choices=['synthetic', 'human'])
@@ -43,10 +43,10 @@ layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab = data.get_sta
 
 print '\n<Main> Converting to tensors'
 train_layouts, train_objects, train_rewards, train_terminal, \
-        train_instructions, train_indices, train_values, train_goals = data.to_tensor(train_data, text_vocab)
+        train_instructions, train_indices, train_values, train_goals = data.to_tensor(train_data, text_vocab, args.annotations)
 
 test_layouts, test_objects, test_rewards, test_terminal, \
-    test_instructions, test_indices, test_values, test_goals = data.to_tensor(test_data, text_vocab)
+    test_instructions, test_indices, test_values, test_goals = data.to_tensor(test_data, text_vocab, args.annotations)
 
 # pdb.set_trace()
 

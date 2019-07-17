@@ -13,6 +13,7 @@ assumes that save path already exists
 '''
 def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save_path, prefix=''):
     ## wrap tensors in Variables to pass to model
+    pdb.set_trace()
     input_vars = ( Variable(tensor.contiguous()) for tensor in inputs )
     predictions = model(input_vars)
 
