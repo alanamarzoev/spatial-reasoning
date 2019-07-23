@@ -43,7 +43,7 @@ class MultiNoRBF(nn.Module):
         bias_batch = bias.unsqueeze(1).unsqueeze(1).unsqueeze(1).repeat(1,1,self.map_dim,self.map_dim)
 
         ## sum over row, col and add bias
-        obj_global = (coeffs_batch * self.positions_batch).sum(1, keepdim=True) + bias_batch
+        obj_global = (coeffs_batch * self.positions_batch.float()).sum(1, keepdim=True) + bias_batch
         return obj_global
 
 
