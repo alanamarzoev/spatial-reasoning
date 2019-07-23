@@ -1,9 +1,9 @@
 import os 
 
 strdir = "git checkout -f unmodified"
-# getdata = "./download_data.sh"
+getdata = "./download_data.sh"
 os.system(strdir)
-# os.system(getdata)
+os.system(getdata)
 
 # grounded language learning -- baseline experiments script 
 # 1. unmodified spatial-reasoning experiments for local and global human annotations 
