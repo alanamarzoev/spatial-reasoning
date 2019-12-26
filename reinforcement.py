@@ -9,7 +9,7 @@ parser.add_argument('--max_train', type=int, default=5000)
 parser.add_argument('--max_test', type=int, default=500)
 
 parser.add_argument('--mode', type=str, default='local', choices=['local', 'global'])
-parser.add_argument('--annotations', type=str, default='human', choices=['synthetic', 'human'])
+parser.add_argument('--annotations', type=str, default='human', choices=['synthetic', 'human', 'both'])
 parser.add_argument('--model', type=str, default='full', choices=['full', 'no-gradient', 'cnn-lstm', 'uvfa-text'])
 
 parser.add_argument('--map_dim', type=int, default=10)
@@ -35,16 +35,34 @@ args = parser.parse_args()
 #################################
 ############## Data #############
 #################################
+args.max_train_human = 0 
+args.max_test_human = 800
+args.max_train_synthetic = 4000
+args.max_test_synthetic = 0 
+args.annotations = 'both'
 
-train_data, test_data = data.load(args.mode, args.annotations, args.max_train, args.max_test)
+train_data, test_data = data.load(args.mode, args.annotations, args.max_train_human, args.max_test_human, args.max_train_synthetic, args.max_test_synthetic)
+layouts, objects, rewards, terminal, instructions, values, goals = train_data
+tlayouts, tobjects, trewards, tterminal, tinstructions, tvalues, tgoals = test_data
+import ipdb; ipdb.set_trace()
 layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab = data.get_statistics(train_data, test_data)
-
 print '\n<Main> Converting to tensors'
 train_layouts, train_objects, train_rewards, train_terminal, \
-        train_instructions, train_indices, train_values, train_goals = data.to_tensor(train_data, text_vocab)
+        train_instructions, train_indices, train_values, train_goals = data.to_tensor_lstm(train_data, text_vocab)
 
 test_layouts, test_objects, test_rewards, test_terminal, \
-    test_instructions, test_indices, test_values, test_goals = data.to_tensor(test_data, text_vocab)
+    test_instructions, test_indices, test_values, test_goals = data.to_tensor_lstm(test_data, text_vocab)
+
+
+# train_data, test_data = data.load(args.mode, args.annotations, args.max_train, args.max_test)
+# layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab = data.get_statistics(train_data, test_data)
+
+# print '\n<Main> Converting to tensors'
+# train_layouts, train_objects, train_rewards, train_terminal, \
+#         train_instructions, train_indices, train_values, train_goals = data.to_tensor(train_data, text_vocab)
+
+# test_layouts, test_objects, test_rewards, test_terminal, \
+#     test_instructions, test_indices, test_values, test_goals = data.to_tensor(test_data, text_vocab)
 
 print '<Main> Training:', train_layouts.size(), 'x', train_objects.size(), 'x', train_indices.size()
 print '<Main> Rewards: ', train_rewards.size(), '    Terminal: ', train_terminal.size()

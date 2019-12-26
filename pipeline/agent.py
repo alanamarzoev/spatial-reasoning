@@ -156,7 +156,8 @@ class Agent:
             # print 'got it!', type(traj), len(traj)
             trajectories.append(traj)
             scores.append(rew)
-        return trajectories, np.mean(scores)
+        
+        return trajectories, torch.mean(torch.stack(scores))
 
     def _simulate_single(self, reward_map, terminal_map, approx_values, start_pos, max_steps):
         # world = world.squeeze()
@@ -267,7 +268,7 @@ class Agent:
                     param.grad.data.clamp_(-1, 1)
 
             self.optimizer.step()
-            err += loss.data[0]
+            err += loss.item()
         err = err / float(num_batches)
         return err
 
