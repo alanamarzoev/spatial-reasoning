@@ -36,14 +36,16 @@ parser.add_argument('--max_test_synthetic', type=int, default=1250)
 
 args = parser.parse_args()
 
+
 #################################
 ############## Data #############
 #################################
 
 train_data, test_data = data.load(args.mode, args.annotations, args.max_train_human, args.max_test_human, args.max_train_synthetic, args.max_test_synthetic)
-layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab = data.get_statistics(train_data, test_data)
- 
+layouts, objects, rewards, terminal, instructions, values, goals = train_data
+tlayouts, tobjects, trewards, tterminal, tinstructions, tvalues, tgoals = test_data
 
+layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab = data.get_statistics(train_data, test_data)
 print '\n<Main> Converting to tensors'
 train_layouts, train_objects, train_rewards, train_terminal, \
         train_instructions, train_indices, train_values, train_goals, max_len = data.to_tensor_lstm(train_data, text_vocab, args.save_path, train=True)
@@ -51,8 +53,6 @@ train_layouts, train_objects, train_rewards, train_terminal, \
 test_layouts, test_objects, test_rewards, test_terminal, \
     test_instructions, test_indices, test_values, test_goals, max_len = data.to_tensor_lstm(test_data, text_vocab, args.save_path, train=False)
 
-print '<Main> Training:', train_layouts.size(), 'x', train_objects.size(), 'x', train_indices.size()
-print '<Main> Rewards: ', train_rewards.size(), '    Terminal: ', train_terminal.size()
 print '<Main> Test    :', test_layouts.size(), 'x', test_objects.size(), 'x', test_indices.size()
 print '<Main> Rewards: ', test_rewards.size(), '    Terminal: ', test_terminal.size()
 
@@ -64,61 +64,17 @@ print '<Main> Rewards: ', test_rewards.size(), '    Terminal: ', test_terminal.s
 print '\n<Main> Initializing model: {}'.format(args.model)
 model = models.init(args, layout_vocab_size, object_vocab_size, text_vocab_size)
 target_model = models.init(args, layout_vocab_size, object_vocab_size, text_vocab_size)
+pickle_path = args.save_path + str("/model.pth")
+statedict = torch.load(pickle_path).state_dict()
+new_model_dict = {k: v for (k, v) in statedict.items() if k in model.state_dict()}
+model.load_state_dict(new_model_dict)
+model.eval()
 
-## initialize agent
-agent = pipeline.Agent(model,  target_model, map_dim = args.map_dim, instr_len = train_indices.size(1), 
-                                batch_size = args.batch_size, learn_start = args.learn_start, 
-                                replay_size = args.replay_size, lr = args.lr, gamma = args.gamma)
-
-train_inputs = (train_layouts, train_objects, train_indices)
 test_inputs = (test_layouts, test_objects, test_indices)
 
-## train agent
-scores = agent.train( train_inputs, train_rewards, train_terminal,
-                      test_inputs, test_rewards, test_terminal, epochs = args.epochs )
-
-
-#################################
-######## Save predictions #######
-#################################
-
-## make logging directories
-pickle_path = os.path.join(args.save_path, 'pickle')
-utils.mkdir(args.save_path)
-utils.mkdir(pickle_path)
-
-print '\n<Main> Saving model and scores to {}'.format(args.save_path)
-## save model
-torch.save(model, os.path.join(args.save_path, 'model.pth'))
-torch.save(model.state_dict(), os.path.join(args.save_path, 'model_statedict.pth'))
-
-## save scores from training
-score_path = os.path.join(pickle_path, 'scores.p')
-pickle.dump(scores, open(score_path, 'wb') )
-
-
 print '<Main> Saving predictions to {}'.format(pickle_path)
-## save inputs, outputs, and MDP info (rewards and terminal maps)
-pipeline.save_predictions(model, train_inputs, train_values, train_rewards, train_terminal, text_vocab, pickle_path, max_len, prefix='train_')
+pickle_path = args.save_path 
 pipeline.save_predictions(model, test_inputs, test_values, test_rewards, test_terminal, text_vocab, pickle_path, max_len, prefix='test_')
-
-
-#################################
-######### Visualization #########
-#################################
-
-vis_path = os.path.join(args.save_path, 'visualization')
-utils.mkdir(vis_path)
-
-print '<Main> Saving visualizations to {}'.format(vis_path)
-
-## save inputs, outputs, and MDP info (rewards and terminal maps)
-visualization.vis_predictions(model, train_inputs, train_values, train_instructions, vis_path, prefix='train_')
-visualization.vis_predictions(model, test_inputs, test_values, test_instructions, vis_path, prefix='test_')
-
-
-
-
 
 
 

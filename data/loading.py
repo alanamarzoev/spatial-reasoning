@@ -184,7 +184,7 @@ def to_tensor_bert(model, data, text_vocab, data_type, embedding_type):
 
 
 
-def to_tensor_lstm(data, text_vocab):
+def to_tensor_lstm(data, text_vocab, save_path, train=False):
     print("LSTM embeddings")
     layouts, objects, rewards, terminal, instructions, values, goals = data
     # full_instructions = copy.deepcopy(train_instructions + val_instructions)
@@ -202,7 +202,7 @@ def to_tensor_lstm(data, text_vocab):
     ## add 1 for 0-padding
     # text_vocab_size = len(text_vocab) + 1 
     # import ipdb; ipdb.set_trace()
-    indices = instructions_to_indices(instructions, text_vocab)
+    indices, max_len = instructions_to_indices(instructions, text_vocab, save_path, train)
     # val_indices = pipeline.instructions_to_indices(val_instructions, text_vocab)
 
     # print '\nVocabulary'
@@ -256,7 +256,7 @@ def to_tensor_lstm(data, text_vocab):
     # val_values = torch.Tensor(val_values).cuda()
     # val_goals = torch.Tensor(val_goals).cuda()
 
-    return layouts, objects, rewards, terminal, instructions, indices, values, goals
+    return layouts, objects, rewards, terminal, instructions, indices, values, goals, max_len
 
 
 ########################################################################
@@ -279,21 +279,30 @@ def get_word_indices(instructions):
 0-pads indices so that all sequences
 are the same length
 '''
-def instructions_to_indices(instructions, ind_dict):
+def instructions_to_indices(instructions, ind_dict, save_path, train=False):
     ## split strings to list of words
     # pdb.set_trace()
+    sent_to_ind = {}
     instructions = [instr.split(' ') for instr in instructions]
     num_instructions = len(instructions)
     max_instr_length = max([len(instr) for instr in instructions])
     indices_obs = np.zeros( (num_instructions, max_instr_length) )
     for count in range(num_instructions):
         indices = [ind_dict[word] for word in instructions[count]]
+        sent_to_ind[str(instructions[count])] = indices 
         # print indices
         indices_obs[count,-len(indices):] = indices
     # print 'num instr: ', num_instructions
+
+    if train: 
+        print("HERE in saving to: ")
+        print(os.path.join(save_path, 'sent_to_ind.pkl'))
+        with open(os.path.join(save_path, 'sent_to_ind.pkl'), 'wb') as f: 
+            pickle.dump(sent_to_ind, f, protocol=pickle.HIGHEST_PROTOCOL)
+
     print 'max length: ', max_instr_length
     # print indices_obs
-    return indices_obs
+    return indices_obs, max_instr_length
 
 ########################################################################
 

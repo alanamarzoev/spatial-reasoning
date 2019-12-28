@@ -15,7 +15,7 @@ class TextModel(nn.Module):
         self.nhid = nhid
         self.nlayers = nlayers
         self.out_dim = out_dim
-
+        print('vocab size: {}'.format(vocab_size))
         self.encoder = nn.Embedding(vocab_size, ninp, padding_idx=0)
         self.rnn = nn.LSTM(ninp, nhid, nlayers)
         self.decoder = nn.Linear(nhid, out_dim)

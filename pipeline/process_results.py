@@ -5,7 +5,7 @@ import data
 import pipeline
 import environment 
 import argparse
-from pipeline import ScoreIteration
+from score_iteration import ScoreIteration
 
 
 def get_states(M, N):
@@ -75,15 +75,18 @@ def simulate_single(reward_map, terminal_map, approx_values, start_pos, max_step
 
 
 
-def run_eval(pickle_path):  
+def run_eval(pickle_path, prefix='', shim=False):  
     metric_path = pickle_path 
     quality_path = os.path.join( metric_path, 'quality')
     if not os.path.exists( quality_path ):
         subprocess.call(['mkdir', quality_path])
 
     save_path = pickle_path 
-   
-    predictions = pickle.load( open(os.path.join(save_path, 'test_predictions.p'), 'rb') ).squeeze()
+    
+    if shim: 
+        predictions = pickle.load( open(os.path.join(save_path, prefix+'predictions_shim.p'), 'rb') ).squeeze()
+    else:
+        predictions = pickle.load( open(os.path.join(save_path, prefix+'predictions.p'), 'rb') ).squeeze()
     targets = pickle.load( open(os.path.join(save_path, 'test_targets.p'), 'rb') ).squeeze()
     rewards = pickle.load( open(os.path.join(save_path, 'test_rewards.p'), 'rb') ).squeeze()
     terminal = pickle.load( open(os.path.join(save_path, 'test_terminal.p'), 'rb') ).squeeze()
