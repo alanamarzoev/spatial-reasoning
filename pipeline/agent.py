@@ -301,7 +301,7 @@ class Agent:
         return avg_score
 
 
-    def train(self, train_inputs, rewards, terminal, val_inputs, val_rewards, val_terminal, epochs = 1000):
+    def train(self, train_inputs, rewards, terminal, val_inputs, val_rewards, val_terminal, epochs = 1000, save_path=None):
         layouts, objects, indices = train_inputs
         val_layouts, val_objects, val_indices = val_inputs
 
@@ -327,6 +327,15 @@ class Agent:
             scores.append(score)
             if i % 20 == 0:
                 self._copy_net()
+
+            if i % 200 == 0 and i != 0: 
+                save_path = os.path.join(save_path, 'epoch_{}'.format(i))
+                print('Epoch #: {}, save path: {}'.format(i, save_path))
+                print '\n<Main> Saving model and scores to {}'.format(save_path)
+                ## save model
+                torch.save(model, os.path.join(save_path, 'model.pth'))
+                torch.save(model.state_dict(), os.path.join(save_path, 'model_statedict.pth'))
+
 
         return scores
             # self.target_network = copy.deepcopy(self.network)

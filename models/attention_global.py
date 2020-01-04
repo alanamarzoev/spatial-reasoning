@@ -6,24 +6,44 @@ import math, pdb
 import torch, torch.nn as nn, torch.nn.functional as F
 import custom
 
+
+
+def cudit(x):
+    if torch.cuda.is_available():
+        return x.cuda()
+    else:
+        return x
+
+
 class AttentionGlobal(nn.Module):
 # args.lstm_out, args.goal_hid, args.rank, args.obj_embed
     def __init__(self, text_model, args, map_dim = 10):
         super(AttentionGlobal, self).__init__()
-        
-        assert args.attention_kernel % 2 == 1
 
+        assert args.attention_kernel % 2 == 1
+        self.args = args 
         self.text_model = text_model
         # self.object_model = object_model
-
+        self.embed_type = args.embedding_type 
         self.embed_dim = args.attention_in_dim
         self.kernel_out_dim = args.attention_out_dim
-        self.kernel_size = args.attention_kernel 
+        self.kernel_size = args.attention_kernel
         self.global_coeffs = args.global_coeffs
+        self.model = args.model 
+        self.reshape = cudit(torch.nn.Linear(768, 66))
+        self.reshape_word = cudit(torch.nn.Linear(1536, 66))
+
+        
+    
+        self.reshape_word_mlp = cudit(torch.nn.Linear(1536, 256))
+        self.reshape_word_mlp2 = cudit(torch.nn.Linear(256, 66))
+
+        self.reshape_mlp = cudit(torch.nn.Linear(768, 256))
+        self.reshape_mlp2 = cudit(torch.nn.Linear(256, 66))
 
         padding = int(math.ceil(self.kernel_size/2.)) - 1
-        self.conv_custom = custom.ConvKernel(self.embed_dim, self.kernel_out_dim, self.kernel_size, bias=False, padding=padding)
 
+        self.conv_custom = custom.ConvKernel(self.embed_dim, self.kernel_out_dim, self.kernel_size, bias=False, padding=padding)
         self.reshape_dim = self.kernel_out_dim * (map_dim-self.kernel_size+1)**2
 
     def __conv(self, inp, kernel):
@@ -32,40 +52,79 @@ class AttentionGlobal(nn.Module):
         out = torch.cat(out, 0)
         return out
 
+   
     def forward(self, inp):
         (embeddings, text) = inp
-        batch_size = embeddings.size(0)
-        text = text.transpose(0,1)
-        hidden = self.text_model.init_hidden(batch_size)
+        if self.embed_type == 'lstm':
+            batch_size  = embeddings.size(0)
+            hidden = self.text_model.init_hidden(batch_size)
+            text = text.transpose(0,1)
+            lstm_out = self.text_model.forward(text, hidden)
+            lstm_kernel = lstm_out[:,:-self.global_coeffs].contiguous()
+            lstm_kernel = lstm_kernel.view(-1, self.kernel_out_dim, self.embed_dim, self.kernel_size, self.kernel_size)
+            local_heatmap = self.__conv(embeddings, lstm_kernel)
+            local_heatmap = local_heatmap.sum(1, keepdim=True)
 
-        # embeddings = self.object_model.forward(obj)
-        # print embeddings.size()
+            lstm_global = lstm_out[:,-self.global_coeffs:]
+            self.output_local = local_heatmap
+            self.output_global = lstm_global
+
+            return local_heatmap, lstm_global
+
+        elif self.embed_type == 'bert' or self.embed_type == 'bert-fixed' or self.embed_type == 'bert-word' or self.embed_type == 'bert-word-fixed': 
+            batch_size = embeddings.size(0)
+            bert_out = self.text_model(text)
         
-        lstm_out = self.text_model.forward(text, hidden)
-        lstm_kernel = lstm_out[:,:-self.global_coeffs].contiguous()
-        lstm_kernel = lstm_kernel.view(-1, self.kernel_out_dim, self.embed_dim, self.kernel_size, self.kernel_size)
-        # print 'LSTM_OUT: ', lstm_out.size()
-        # print 'EMBEDDINGS: ', embeddings.size()
-        # print self.kernel_size/2 - 1, self.kernel_size
-        local_heatmap = self.__conv(embeddings, lstm_kernel)
+            text_embed = []
+            for embed in bert_out:
+                if self.args.bert_reshape_type == 'linear':
+                    if self.embed_type == 'bert-word' or self.embed_type == 'bert-word-fixed': 
+                        lstm_out = self.reshape_word(embed)
+                    else: 
+                        lstm_out = self.reshape(embed)
+                else: # MLP
+                    if self.embed_type == 'bert-word' or self.embed_type == 'bert-word-fixed': 
+                        lstm_out = self.reshape_word_mlp2(F.relu(self.reshape_word_mlp(embed)))
+                    else: 
+                        lstm_out = self.reshape_mlp2(F.relu(self.reshape_mlp(embed)))
 
-        ## sum along attention_out_dim
-        ## < batch x attention_out_dim x map_dim x map_dim >
-        ## < batch x 1 x map_dim x map_dim >
-        local_heatmap = local_heatmap.sum(1, keepdim=True)
+                text_embed.append(lstm_out)
+           
+            lstm_out = torch.stack(text_embed).squeeze(1)
+            lstm_kernel = lstm_out[:,:-self.global_coeffs].contiguous()
+            lstm_kernel = lstm_kernel.view(-1, self.kernel_out_dim, self.embed_dim, self.kernel_size, self.kernel_size)
+            local_heatmap = self.__conv(embeddings, lstm_kernel)
+            local_heatmap = local_heatmap.sum(1, keepdim=True)
+            lstm_global = lstm_out[:,-self.global_coeffs:]
+            self.output_local = local_heatmap
+            self.output_global = lstm_global
 
-        lstm_global = lstm_out[:,-self.global_coeffs:]
-        # global_heatmap = self._global(lstm_global)
+            return local_heatmap, lstm_global
+        
+        else: # assuming one-hot or random 
+            batch_size  = embeddings.size(0)
+            out = []
+            if self.embed_type == 'one-hot': # not actually one hot, just zeros vec 
+                out.append(torch.zeros(66)) 
+                out = torch.stack(out)
+            elif self.embed_type == 'random':
+                out = [torch.rand(1, 66) for x in text]
+                out = torch.stack(out)
+                # out = text
+                out = out.squeeze(1)
+            else: 
+                raise ValueError('embedding not recognized...')         
 
-        # out = local_heatmap + global_heatmap 
-        # print conv.size()
-        # conv = conv.view(-1, self.reshape_dim)
+            lstm_kernel = out[:,:-self.global_coeffs].contiguous()
+            lstm_kernel = lstm_kernel.view(-1, self.kernel_out_dim, self.embed_dim, self.kernel_size, self.kernel_size)
+            local_heatmap = self.__conv(embeddings, lstm_kernel)
+            local_heatmap = local_heatmap.sum(1, keepdim=True)
+            lstm_global = out[:,-self.global_coeffs:]
+            self.output_local = local_heatmap
+            self.output_global = lstm_global
 
-        ## save outputs for kernel visualization
-        self.output_local = local_heatmap
-        self.output_global = lstm_global
+            return local_heatmap, lstm_global
 
-        return local_heatmap, lstm_global
 
 
 if __name__ == '__main__':

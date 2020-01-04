@@ -7,6 +7,8 @@ from constraint_factorizer import *
 from model_factorizer import *
 from values_factorized import *
 from map_model import *
+from bert_model import * 
+
 
 ## attention
 from lookup_model import *

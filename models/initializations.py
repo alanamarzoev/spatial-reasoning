@@ -1,5 +1,5 @@
 import models
-
+import torch 
 '''
 norbf (full), nobases (no gradient), nonsep
 uvfa-pos, uvfa-text, cnn+lstm
@@ -12,9 +12,19 @@ no rbf / gradient: nobases
 no cnn: nocnn
 '''
 
+def cudit(x):
+    if torch.cuda.is_available():
+        return x.cuda()
+    else:
+        return x
+
+
 def init(args, layout_vocab_size, object_vocab_size, text_vocab_size):
     if args.model == 'full': ## new
         model = init_full(args, layout_vocab_size, object_vocab_size, text_vocab_size)
+    elif args.model == 'bert-full':
+        model = init_bert_full(args, layout_vocab_size, object_vocab_size, text_vocab_size)
+        return model
     elif args.model == 'no-gradient':
         model = init_nogradient(args, layout_vocab_size, object_vocab_size, text_vocab_size)
     elif args.model == 'cnn-lstm':
@@ -26,6 +36,31 @@ def init(args, layout_vocab_size, object_vocab_size, text_vocab_size):
         model = init_uvfa_pos(args, layout_vocab_size, object_vocab_size, text_vocab_size)
         train_indices = train_goals
         val_indices = val_goals
+    return model
+
+
+def init_bert_full(args, layout_vocab_size, object_vocab_size, text_vocab_size):
+    args.global_coeffs = 3
+    args.attention_in_dim = args.obj_embed
+    args.lstm_out = args.attention_in_dim * args.attention_out_dim * args.attention_kernel**2 + args.global_coeffs
+    
+    state_model = cudit(models.LookupModel(layout_vocab_size, args.state_embed))
+    object_model = models.LookupModel(object_vocab_size, args.obj_embed)
+
+    if args.embedding_type == 'bert-fixed':
+        text_model = models.BModel(True, 'sentence', args.model) # set network eval mode to True, only use output layer embeddings 
+    elif args.embedding_type == 'bert': 
+        text_model = models.BModel(False, 'sentence', args.model)
+    elif args.embedding_type == 'bert-word-fixed':
+        text_model = models.BModel(True, 'word', args.model)
+    elif args.embedding_type == 'bert-word':
+        text_model = models.BModel(False, 'word', args.model)
+    else: 
+        text_model = models.BModel(True, 'word', args.model) # arbitrary, won't be used
+
+    heatmap_model = cudit(models.AttentionGlobal(text_model, args, map_dim=args.map_dim))
+
+    model = cudit(models.MultiNoRBF(state_model, object_model, heatmap_model, args, map_dim=args.map_dim))
     return model
 
 
