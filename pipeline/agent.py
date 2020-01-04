@@ -1,6 +1,7 @@
 import math, numpy as np, copy, pdb
 import torch, torch.nn as nn, torch.optim as optim, torch.nn.functional as F
 from torch.autograd import Variable
+import os 
 
 class Agent:
 
@@ -328,7 +329,7 @@ class Agent:
             if i % 20 == 0:
                 self._copy_net()
 
-            if i % 200 == 0 and i != 0: 
+            if i % 200 == 0: 
                 save_path = os.path.join(save_path, 'epoch_{}'.format(i))
                 print('Epoch #: {}, save path: {}'.format(i, save_path))
                 print '\n<Main> Saving model and scores to {}'.format(save_path)
