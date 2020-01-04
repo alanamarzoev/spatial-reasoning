@@ -330,7 +330,11 @@ class Agent:
                 self._copy_net()
 
             if i % 200 == 0: 
+                if not os.path.exists(save_path):
+                    os.makedirs(save_path)
                 save_path = os.path.join(save_path, 'epoch_{}'.format(i))
+                if not os.path.exists(save_path):
+                    os.makedirs(save_path)
                 print('Epoch #: {}, save path: {}'.format(i, save_path))
                 print '\n<Main> Saving model and scores to {}'.format(save_path)
                 ## save model
