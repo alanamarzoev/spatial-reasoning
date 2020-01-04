@@ -334,8 +334,8 @@ class Agent:
                 print('Epoch #: {}, save path: {}'.format(i, save_path))
                 print '\n<Main> Saving model and scores to {}'.format(save_path)
                 ## save model
-                torch.save(model, os.path.join(save_path, 'model.pth'))
-                torch.save(model.state_dict(), os.path.join(save_path, 'model_statedict.pth'))
+                torch.save(self, os.path.join(save_path, 'model.pth'))
+                torch.save(self.state_dict(), os.path.join(save_path, 'model_statedict.pth'))
 
 
         return scores
