@@ -172,8 +172,9 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
 
         all_predictions = []
         for i in range(layouts.shape[0] / 100):
-            new_inputs = (layouts[i:i+99], objects[i:i+99], all_new_indices[i:i+99])
+            new_inputs = (layouts[i*99:(i+1)*99], objects[i*99:(i+1)*99], all_new_indices[i*99:(i+1)*99])
             new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
+            print('input vars shape: {}'.format(new_input_vars[2].shape))
             predictions_shim = model(new_input_vars)
             predictions_shim = predictions_shim.data.cpu().numpy()
             all_predictions.append(predictions_shim)
