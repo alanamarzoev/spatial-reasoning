@@ -10,7 +10,7 @@ parser.add_argument('--max_test', type=int, default=500)
 
 parser.add_argument('--mode', type=str, default='local', choices=['local', 'global'])
 parser.add_argument('--annotations', type=str, default='human', choices=['synthetic', 'human', 'both'])
-parser.add_argument('--model', type=str, default='full', choices=['full', 'no-gradient', 'cnn-lstm', 'uvfa-text'])
+parser.add_argument('--model', type=str, default='full', choices=['full', 'bert-full', 'no-gradient', 'cnn-lstm', 'uvfa-text'])
 
 parser.add_argument('--map_dim', type=int, default=10)
 parser.add_argument('--state_embed', type=int, default=1)
@@ -33,6 +33,9 @@ parser.add_argument('--max_train_human', type=int, default=1250)
 parser.add_argument('--max_test_human', type=int, default=1250)
 parser.add_argument('--max_train_synthetic', type=int, default=1250)
 parser.add_argument('--max_test_synthetic', type=int, default=1250)
+
+parser.add_argument('--embedding_type', type=str, default='lstm', choices=['lstm', 'bert', 'one-hot', 'random', 'bert-fixed', 'bert-word-fixed', 'bert-word', 'gpt'])
+parser.add_argument('--bert_reshape_type', type=str, default='linear', choices=['linear', 'MLP'])
 
 args = parser.parse_args()
 
