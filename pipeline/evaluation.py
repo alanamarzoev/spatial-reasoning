@@ -174,7 +174,7 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
         for i in range(layouts.shape[0] / 100):
             new_inputs = (layouts[i*99:(i+1)*99], objects[i*99:(i+1)*99], all_new_indices[i*99:(i+1)*99])
             new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
-            print('input vars shape: {}'.format(new_input_vars[2].shape))
+            # print('input vars shape: {}'.format(new_input_vars[2].shape))
             predictions_shim = model(new_input_vars)
             predictions_shim = predictions_shim.data.cpu().numpy()
             all_predictions.append(predictions_shim)
@@ -188,11 +188,23 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
         pickle.dump(predictions_shim, open(os.path.join(save_path, prefix+'predictions_shim.p'), 'wb') )
     else: 
         save_path = save_path + "/pickle"
+
+
     input_vars = ( Variable(tensor.contiguous()) for tensor in inputs )
     predictions = model(input_vars)
-   
+
+    all_predictions = []
+    for i in range(layouts.shape[0] / 100):
+        new_inputs = (layouts[i*99:(i+1)*99], objects[i*99:(i+1)*99], all_new_indices[i*99:(i+1)*99])
+        new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
+        # print('input vars shape: {}'.format(new_input_vars[2].shape))
+        predictions = model(new_input_vars)
+        predictions = predictions.data.cpu().numpy()
+        all_predictions.append(predictions)
+
+    predictions = np.stack(all_predictions)
     ## convert to numpy arrays for saving to disk
-    predictions = predictions.data.cpu().numpy()
+    # predictions = predictions.data.cpu().numpy()
     targets = targets.cpu().numpy()
 
     ## save the predicted and target value maps
