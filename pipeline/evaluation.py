@@ -190,8 +190,8 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
         save_path = save_path + "/pickle"
 
 
-    input_vars = ( Variable(tensor.contiguous()) for tensor in inputs )
-    predictions = model(input_vars)
+    # input_vars = ( Variable(tensor.contiguous()) for tensor in inputs )
+    # predictions = model(input_vars)
 
     all_predictions = []
     for i in range(layouts.shape[0] / 100):
