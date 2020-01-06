@@ -181,7 +181,8 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
             all_predictions.append(predictions_shim)
 
         predictions_shim = np.stack(all_predictions)
-        predictions_shim = np.reshape(predictions_shim, (predictions_shim.shape[0] * predictions_shim.shape[1], predictions_shim.shape[2], predictions_shim.shape[3]))
+        predictions_shim = predictions_shim.reshape(-1, *predictions_shim.shape[-3:])
+        # predictions_shim = np.reshape(predictions_shim, (predictions_shim.shape[0] * predictions_shim.shape[1], predictions_shim.shape[2], predictions_shim.shape[3]))
         # new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
 
         # import ipdb; ipdb.set_trace()
@@ -206,7 +207,8 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
         all_predictions.append(predictions)
 
     predictions = np.stack(all_predictions)
-    predictions = np.reshape(predictions, (predictions.shape[0] * predictions.shape[1], predictions.shape[2], predictions.shape[3]))
+    predictions = predictions.reshape(-1, *predictions.shape[-3:])
+    # predictions = np.reshape(predictions, (predictions.shape[0] * predictions.shape[1], predictions.shape[2], predictions.shape[3]))
     ## convert to numpy arrays for saving to disk
     # predictions = predictions.data.cpu().numpy()
     targets = targets.cpu().numpy()[:len(predictions)]
