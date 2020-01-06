@@ -25,8 +25,6 @@ tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
 
 
-
-
 def dist_cos(query, target):
     query = query / torch.norm(query, dim=1).unsqueeze(1)
     target = target / torch.norm(target, dim=1).unsqueeze(1)
@@ -155,8 +153,8 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
         
         save_path = save_path + "/pickle"
         
-        pickle.dump(similarity_meta_COS, open(os.path.join(save_path, prefix+'cos_closest.p'), 'wb'))
-        pickle.dump(similarity_meta_LSH, open(os.path.join(save_path, prefix+'lsh_closest.p'), 'wb') )
+        # pickle.dump(similarity_meta_COS, open(os.path.join(save_path, prefix+'cos_closest.p'), 'wb'))
+        # pickle.dump(similarity_meta_LSH, open(os.path.join(save_path, prefix+'lsh_closest.p'), 'wb') )
         
         all_new_indices = []
         for ind in new_indices: 
@@ -171,10 +169,21 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
 
         all_new_indices = torch.stack(all_new_indices).cuda()
         new_inputs = (layouts, objects, all_new_indices)
-        new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
-        predictions_shim = model(new_input_vars)
+
+        all_predictions = []
+        for i in range(layouts.shape[0] / 100):
+            new_inputs = (layouts[i:i+99], objects[i:i+99], all_new_indices[i:i+99])
+            new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
+            predictions_shim = model(new_input_vars)
+            predictions_shim = predictions_shim.data.cpu().numpy()
+            all_predictions.append(predictions_shim)
+
+        predictions_shim = np.stack(all_predictions)
+        # new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
+
+        # import ipdb; ipdb.set_trace()
+
         print('saving to {}'.format(os.path.join(save_path, prefix+'predictions_shim.p')))
-        predictions_shim = predictions_shim.data.cpu().numpy()
         pickle.dump(predictions_shim, open(os.path.join(save_path, prefix+'predictions_shim.p'), 'wb') )
     else: 
         save_path = save_path + "/pickle"
