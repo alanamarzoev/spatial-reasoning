@@ -295,6 +295,8 @@ def instructions_to_indices(instructions, ind_dict, save_path, train=False):
     # print 'num instr: ', num_instructions
 
     if train: 
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
         print("HERE in saving to: ")
         print(os.path.join(save_path, 'sent_to_ind.pkl'))
         with open(os.path.join(save_path, 'sent_to_ind.pkl'), 'wb') as f: 
