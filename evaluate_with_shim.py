@@ -75,7 +75,7 @@ model.eval()
 
 test_inputs = (test_layouts, test_objects, test_indices)
 
-print '<Main> Saving predictions to {}'.format(pickle_path)
+# print '<Main> Saving predictions to {}'.format(pickle_path)
 pickle_path = args.save_path 
 pipeline.save_predictions(model, test_inputs, test_values, test_rewards, test_terminal, text_vocab, pickle_path, max_len, prefix='test_')
 
