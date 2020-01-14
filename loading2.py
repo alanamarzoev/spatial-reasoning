@@ -32,7 +32,7 @@ def load(mode, data, num_train_human, num_test_human, num_train_synthetic, num_t
         test = build_turk_observations_unified(turk_path, annotation_path, num_test_human, states, test_maps, test = True)
          
     elif data == 'synthetic':
-        turk_path = os.path.join('data', mode)
+        turk_path = os.path.join('data/synthetic/', mode)
         states, _ = initialize_states(turk_path)
         lower_bound = 0
         train, stop_point = build_reinforce_observations_unified(turk_path, num_train_synthetic, states, lower_bound) 
@@ -49,7 +49,7 @@ def load(mode, data, num_train_human, num_test_human, num_train_synthetic, num_t
 
         print("Loaded {} human examples...".format(human_train[0].shape[0] + human_test[0].shape[0]))
     
-        turk_path = os.path.join('data', mode)
+        turk_path = os.path.join('data/synthetic/', mode)
         states, _ = initialize_states(turk_path)
 
         lower_bound = 0
@@ -73,6 +73,11 @@ def load(mode, data, num_train_human, num_test_human, num_train_synthetic, num_t
                 test.append(np.concatenate((human_test[dim], syn_test[dim])))
                 
     return train, test
+
+def load_text_vocab(vocab_file):
+    with open(vocab_file, 'rb') as f:
+        text_vocab = pickle.load(f)
+        return text_vocab, len(text_vocab) + 1
 
 def synthetic_to_maps(map_dim):
     layouts, objects, rewards, terminal, instructions, values, goals = data
@@ -183,13 +188,8 @@ def to_tensor_bert(model, data, text_vocab, data_type, embedding_type):
     return layouts, objects, rewards, terminal, instructions, indices, values, goals
 
 
-def load_text_vocab(vocab_file):
-    with open(vocab_file, 'rb') as f:
-        text_vocab = pickle.load(f)
-        return text_vocab, len(text_vocab) + 1
 
-
-def to_tensor_lstm(data, text_vocab, save_path, train=False):
+def to_tensor_lstm(data, text_vocab):
     print("LSTM embeddings")
     layouts, objects, rewards, terminal, instructions, values, goals = data
     # full_instructions = copy.deepcopy(train_instructions + val_instructions)
@@ -206,8 +206,7 @@ def to_tensor_lstm(data, text_vocab, save_path, train=False):
     # text_vocab = pipeline.word_indices(full_instructions)
     ## add 1 for 0-padding
     # text_vocab_size = len(text_vocab) + 1 
-    # import ipdb; ipdb.set_trace()
-    indices, max_len = instructions_to_indices(instructions, text_vocab, save_path, train)
+    indices = instructions_to_indices(instructions, text_vocab)
     # val_indices = pipeline.instructions_to_indices(val_instructions, text_vocab)
 
     # print '\nVocabulary'
@@ -261,7 +260,7 @@ def to_tensor_lstm(data, text_vocab, save_path, train=False):
     # val_values = torch.Tensor(val_values).cuda()
     # val_goals = torch.Tensor(val_goals).cuda()
 
-    return layouts, objects, rewards, terminal, instructions, indices, values, goals, max_len
+    return layouts, objects, rewards, terminal, instructions, indices, values, goals
 
 
 ########################################################################
@@ -274,7 +273,7 @@ so that 0-padding is possible
 '''
 def get_word_indices(instructions):
     words = [word for phrase in instructions for word in phrase.split(' ')]
-    unique = list(set(words))
+    unique = sorted(list(set(words)))
     indices = { unique[i]: i+1 for i in range(len(unique)) }
     # num_unique = len(indices)
     # print indices
@@ -284,32 +283,21 @@ def get_word_indices(instructions):
 0-pads indices so that all sequences
 are the same length
 '''
-def instructions_to_indices(instructions, ind_dict, save_path, train=False):
+def instructions_to_indices(instructions, ind_dict):
     ## split strings to list of words
     # pdb.set_trace()
-    sent_to_ind = {}
     instructions = [instr.split(' ') for instr in instructions]
     num_instructions = len(instructions)
     max_instr_length = max([len(instr) for instr in instructions])
     indices_obs = np.zeros( (num_instructions, max_instr_length) )
     for count in range(num_instructions):
         indices = [ind_dict[word] for word in instructions[count]]
-        sent_to_ind[str(instructions[count])] = indices 
         # print indices
         indices_obs[count,-len(indices):] = indices
     # print 'num instr: ', num_instructions
-
-    if train: 
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        print("HERE in saving to: ")
-        print(os.path.join(save_path, 'sent_to_ind.pkl'))
-        with open(os.path.join(save_path, 'sent_to_ind.pkl'), 'wb') as f: 
-            pickle.dump(sent_to_ind, f, protocol=pickle.HIGHEST_PROTOCOL)
-
     print 'max length: ', max_instr_length
     # print indices_obs
-    return indices_obs, max_instr_length
+    return indices_obs
 
 ########################################################################
 
@@ -641,11 +629,9 @@ def build_turk_observations_unified(data_path, annotation_path, num_worlds, stat
     instruct_obs = []
     goals_obs = []
 
-    # if 'DATA_DIR' in os.environ: 
-    #     annotation_path = os.path.join(os.environ['DATA_DIR'], 'spatial-reasoning', annotation_path) 
+    if 'DATA_DIR' in os.environ: 
+        annotation_path = os.path.join(os.environ['DATA_DIR'], 'spatial-reasoning', annotation_path) 
     
-    # annotations = pickle.load( open(annotation_path, 'rb') )
-
     annotations = pickle.load( open(annotation_path, 'rb') )
     keys = annotations.keys()
 

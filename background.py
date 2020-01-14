@@ -23,7 +23,7 @@ def run():
             pass
 
     _rm('stdout'); _rm('stderr'); _rm('pid'); _rm('result'); _rm('com')
-
+    print('h4')
     with open(_results('com'), 'w') as f:
         f.write(' '.join(com) + '\n')
 
@@ -47,17 +47,21 @@ def run():
 
 
 def main():
+    print('hi')
     if os.fork() > 0:
+        print('help2')
         sys.exit(0)
 
     # os.chdir("/")
     os.setsid()
     os.umask(0)
-
+    print('hi2')
     if os.fork() > 0:
+        print('help')
         sys.exit(0)
 
     run()
+    print('h3')
 
 if __name__ == '__main__':
     main()

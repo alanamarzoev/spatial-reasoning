@@ -101,6 +101,7 @@ assumes that save path already exists
 '''
 def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save_path, max_seq_length, prefix=''):
     ## wrap tensors in Variables to pass to model
+    pickle.dump(text_vocab, open(os.path.join(save_path, prefix+'vocab.p'), 'wb') )
 
     layouts, objects, indices = inputs 
     if prefix == 'test_':
@@ -220,7 +221,6 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
     pickle.dump(targets, open(os.path.join(save_path, prefix+'targets.p'), 'wb') )
     pickle.dump(rewards, open(os.path.join(save_path, prefix+'rewards.p'), 'wb') )
     pickle.dump(terminal, open(os.path.join(save_path, prefix+'terminal.p'), 'wb') )
-    pickle.dump(text_vocab, open(os.path.join(save_path, prefix+'vocab.p'), 'wb') )
 
     if prefix == 'test_':
         print("REGULAR:")

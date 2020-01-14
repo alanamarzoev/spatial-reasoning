@@ -37,6 +37,9 @@ parser.add_argument('--max_test_synthetic', type=int, default=1250)
 parser.add_argument('--embedding_type', type=str, default='lstm', choices=['lstm', 'bert', 'one-hot', 'random', 'bert-fixed', 'bert-word-fixed', 'bert-word', 'gpt'])
 parser.add_argument('--bert_reshape_type', type=str, default='linear', choices=['linear', 'MLP'])
 
+
+parser.add_argument('--vocab_file')
+
 args = parser.parse_args()
 
 
@@ -49,12 +52,25 @@ layouts, objects, rewards, terminal, instructions, values, goals = train_data
 tlayouts, tobjects, trewards, tterminal, tinstructions, tvalues, tgoals = test_data
 
 layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab = data.get_statistics(train_data, test_data)
+
+if args.vocab_file:
+    print('PREVIOUS VOCAB SIZE: {}'.format(text_vocab_size))
+    text_vocab, text_vocab_size = data.load_text_vocab(args.vocab_file)
+
 print '\n<Main> Converting to tensors'
-train_layouts, train_objects, train_rewards, train_terminal, \
+if args.model == 'full':
+    train_layouts, train_objects, train_rewards, train_terminal, \
         train_instructions, train_indices, train_values, train_goals, max_len = data.to_tensor_lstm(train_data, text_vocab, args.save_path, train=True)
 
-test_layouts, test_objects, test_rewards, test_terminal, \
-    test_instructions, test_indices, test_values, test_goals, max_len = data.to_tensor_lstm(test_data, text_vocab, args.save_path, train=False)
+    test_layouts, test_objects, test_rewards, test_terminal, \
+        test_instructions, test_indices, test_values, test_goals, max_len = data.to_tensor_lstm(test_data, text_vocab, args.save_path, train=False)
+else: 
+
+    train_layouts, train_objects, train_rewards, train_terminal, train_instructions, train_indices, train_values, train_goals = data.to_tensor_bert(args, train_data, text_vocab, args.annotations, args.embedding_type)
+
+
+    test_layouts, test_objects, test_rewards, test_terminal, \
+            test_instructions, test_indices, test_values, test_goals = data.to_tensor_bert(args, test_data, text_vocab, args.annotations, args.embedding_type)
 
 print '<Main> Test    :', test_layouts.size(), 'x', test_objects.size(), 'x', test_indices.size()
 print '<Main> Rewards: ', test_rewards.size(), '    Terminal: ', test_terminal.size()

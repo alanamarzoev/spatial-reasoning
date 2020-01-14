@@ -1,0 +1,161 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2019
+
+% ready for submission
+% \usepackage{neurips_2019}
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+%     \usepackage[preprint]{neurips_2019}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+     \usepackage[final]{icml2019}
+
+% to avoid loading the natbib package, add option nonatbib:
+%     \usepackage[nonatbib]{neurips_2019}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{graphics}
+\usepackage{xspace}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+
+
+\newcommand\bert{\textsc{bert}\xspace}
+\newcommand\params{\theta}
+\newcommand\model{f}
+\newcommand\inputs{\mathcal{X}}
+\newcommand\outputs{\mathcal{Y}}
+\newcommand\fakedata{\tilde{\mathcal{D}}}
+\newcommand\realdata{\mathcal{D}}
+\newcommand\fakeinput{\tilde{x}}
+\newcommand\fakeoutput{\tilde{y}}
+\newcommand\realinput{x}
+\newcommand\realoutput{y}
+\newcommand\eg{e.g.\ }
+\newcommand\expect{\mathbf{E}}
+\newcommand\encode{\texttt{encode}\xspace}
+\newcommand\decode{\texttt{decode}\xspace}
+\newcommand\embed{\texttt{embed}\xspace}
+\newcommand\loss{\mathcal{L}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\title{Unnatural Language Processing:\\Bridging the Gap Between Synthetic and Natural Language Data}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+\author 
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract} 
+
+\end{abstract}
+
+\section{Introduction}
+-Interactive NLP applications are notoriously difficult to build -- one of the primary challenges is collecting data, having a lot of which is a requirement for building sophisticated models. 
+-Need a large number of examples to achieve sufficient coverage 
+Existing datasets typically aren't well suited for these tasks
+-Sometimes mechanical turk is an option (albeit a slow and expensive one), but other times it is not because you need skilled annotators (e.g. annotators who know SQL) 
+-Bootstrapping in these domains is therefore close to impossible without experts 
+
+-We propose a new method for bootstrapping in these data constrained domains that requires zero natural language training examples
+-Train models on synthetic examples generated from a hand-engineered grammar 
+-At test time, given a natural language input, we find a projection from this input onto the space of synthetic utterances, finding the closest one 
+-Assuming a grammar w/sufficient coverage of the input domain, this problem reduces to effectively translating from natural to synthetic language. We propose various methods for doing so, as well as practical guidance for how to bootstrap a synthetic grammar and how to extend it over time.
+
+-This is akin to sim-to-real transfer which has seen great success as highlighted by the robotics literature. Prior approaches to do this in the realm of NLP were unsuccessful / brittle. 
+-e.g. 54 percent accuracy drop etc but the recent success of self-supervised representation learning makes this a topic worth revisiting. 
+- Thus, we are able to come closer to achieving the best of both worlds by allowing application developers to bootstrap in a fast and cost effective way without compensating with model performance degradation down the line. 
+
+
+-In experiments, we show... 
+\section{Approach}
+Developer who wants to bootstrap in a new domain engineers a synthetic grammar, then uses grammar to generate synthetic training examples. Trains application-specific model on these synthetic training examples. Developer chooses a projection technique so that test time examples are translated to their synthetic counterparts. By doing so, they are able to recover a significant amount of performance quality that otherwise would have been lost when switching to operating on natural language utterances. The effectiveness of this approach is highly dependent on the quality of the synthetic grammar, as well as on the complexity of the domain. In sections X and Y, we provide a more thorough analysis on how to measure the quality of a synthetic grammar, practical methods for constructing a high coverage grammar, and introduce techniques for adaptively improving the grammar over time as it becomes possible to collect more natural language training data and overcome the chicken-and-egg problem associated w/boot strapping in these types of domains.  
+\subsection{Semantic similarity via learned representations}
+- The primary insight behind our approach is to exploit semantically rich vector representations of language as the foundation from which to translate between natural and synthetic language statements. 
+- The question is how do you get high quality sentence embeddings. 
+
+- Language models trained trained on large, text-only corpora have seen a lot of recent success, so we decided to use BERT sentence embeddings to serve as an initial foundation for our work
+- More concretely, our initial hypothesis was that a natural language utterance and its synthetic language counterpart would have similar representations 
+as BERT sentence embeddings, despite potentially large superficial differences.
+
+- For example, if a developer was trying to build a semantic parser for a publicatons dataset, one natural language question and its synthetic counterpart might be ``who has published the most articles?" and ``person that is author of the most number of article?". Although these sentences differ substantially with regards to syntax and style (?), they are semantically equivalent. If a semantic parser  trained on exclusively sentences generated from a synthetic grammar, like the one above, was given the natural language counterpart, it is unlikely that the model would generalize well enough to be able to cope with the (?) differences between the utterances, even if it was trained to handle the scenario where that utterance would arise. 
+
+- This is the source of the aforementioned performance gap that arises when models are trained on exclusively synthetic data, but tested on natural language data. 
+- The challenge is therefore figuring out how to bridge this ``reality" gap and ensure that a model trained to handle a situation associated with some particular semantics can generalize to any version of an utterance with these semantics. 
+
+\subsection{Problem formulation}
+- Our goal is to learn a model $\model : \inputs \to \outputs$, where $\inputs$ is the space of of natural language inputs (\eg questions or instructions) and $\outputs$ is a space of outputs (\eg semantic parses, action sequences, or dialogue responses). We assume access to an (arbitrarily large) dataset of synthetic training examples $\fakedata = \{(\fakeinput_i, \fakeoutput_i)\}$ for training $\model$. Our goal is to minimize some expected loss
+$\expect_{(\realinput, \realoutput) \sim \realdata}[ \loss(\model(\realinput), \realoutput)]$
+with respect to a ``natural'' data distribution $\realdata$.
+
+- In section X, we introduce a set of projection models that meet this specification and discuss what factors must be taken into consideration when deciding which one should be used for a given problem domain. 
+
+\section{Projection methods}
+\subsection{Nearest neighbors search}
+Effective, but comes with efficiency challenges
+\subsection{Locality sensitive hashing via random projections}
+Much more efficient search 
+\subsection{Sequence-to-sequence models}
+Precludes the need for storing the full synthetic dataset in memory. Maybe there will be other benefits?
+
+\section{Synthetic grammar}
+\subsection{Requirements}
+High coverage is the main one. How constricted is the domain? What is the scope of interactions that should be supported? Are most interactions predictable? 
+\subsection{Procedure}
+Add examples of grammars. Developer must come up with certain representative utterances + actions that act as the space to project onto. Must ensure that this space is large enough (i.e. that the grammar has sufficient coverage). Answers to the questions in the prior section are good indication for how feasible this is to do, but even if you're dealing with a high-entropy domain, this is still a good technique for bootstrapping and collecting sufficient human language data to overcome the chicken-and-egg problem. 
+\subsection{Detecting out-of-scope inputs} 
+Define similarity thresholds, come up with decision metric based on inference output? 
+\subsection{Adaptively improving the synthetic grammar}
+By using this approach to bootstrap, it becomes possible to collect human language training data and to use this data to improve the grammar and the model. Analyze all new human language inputs, detect what was out of scope, run a similarity analysis on these out of scope inputs to detect which are similar, validate that they are actually similar, extend the grammar to generate an exhaustive list of examples of that format, retrain model, and continue. This process is a sort of feedback loop. Eventually, it's possible that you won't need the grammar anymore?  
+\section{Evaluation}
+We evaluate our approach on seven semantic parsing domains, and on a robot instruction following reinforcement learning benchmark. 
+\subsection{Semantic parsing}
+\subsection{Robot instruction following}
+
+\section{Embedding analysis}
+How easy is it to tease out semantic meaning from embeddings? Can we use this to create better translation models without improving the grammars?
+
+\section{Related work}
+Semantic parsing overnight, mention how this is complementary to the idea of data programming?
+\section{Conclusion and future work}
+
+% Paper outline: 
+% Abstract/intro (similar to NeurIPS, but more reference to the robotics parallel?) (12/22)
+% Moral of the story (aka BERT embeddings act as a good foundation for projections) (12/23)
+% Challenges w/ out-of-the-box approach (resolving ambiguity inherent in vector based similarity search, detecting when nat lang input is sufficiently out of scope for grammar / figuring out when this is a problem & easily fine tuning the regular model + projection model to compensate, inefficiency of doing brute force NN search, how do you even write a good grammar in the first place?) (12/24)
+% Bootstrapping a grammar (12/25)
+% Translating from real2sim, utilizing in-grammar domain knowledge to guide translation (12/26)
+% Detecting out of scope inputs, fine tuning to expand the grammar (12/27)
+% Experimental evaluation (semantic parsing, GPL, DRIF or equivalent) (12/28)
+% Related work (+data programming stuff) (12/25)
+% Summary
+
+
+
+
+
+\bibliographystyle{plain}
+\bibliography{bib}
+\end{document}

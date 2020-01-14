@@ -46,6 +46,7 @@ args = parser.parse_args()
 train_data, test_data = data.load(args.mode, args.annotations, args.max_train_human, args.max_test_human, args.max_train_synthetic, args.max_test_synthetic)
 layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab = data.get_statistics(train_data, test_data)
  
+pickle.dump(text_vocab, open(os.path.join(args.save_path, 'vocab.p'), 'wb') )
 
 print '\n<Main> Converting to tensors'
 train_layouts, train_objects, train_rewards, train_terminal, \
@@ -89,12 +90,12 @@ scores = agent.train( train_inputs, train_rewards, train_terminal,
 pickle_path = os.path.join(args.save_path, 'pickle')
 #utils.mkdir(args.save_path)
 #utils.mkdir(pickle_path)
-import os
 if not os.path.exists(args.save_path):
     os.makedirs(args.save_path)
-import os
+
 if not os.path.exists(pickle_path):
     os.makedirs(pickle_path)
+
 print '\n<Main> Saving model and scores to {}'.format(args.save_path)
 ## save model
 torch.save(model, os.path.join(args.save_path, 'model.pth'))
@@ -109,22 +110,6 @@ print '<Main> Saving predictions to {}'.format(pickle_path)
 ## save inputs, outputs, and MDP info (rewards and terminal maps)
 pipeline.save_predictions(model, train_inputs, train_values, train_rewards, train_terminal, text_vocab, pickle_path, max_len, prefix='train_')
 pipeline.save_predictions(model, test_inputs, test_values, test_rewards, test_terminal, text_vocab, pickle_path, max_len, prefix='test_')
-
-
-#################################
-######### Visualization #########
-#################################
-
-vis_path = os.path.join(args.save_path, 'visualization')
-utils.mkdir(vis_path)
-
-print '<Main> Saving visualizations to {}'.format(vis_path)
-
-## save inputs, outputs, and MDP info (rewards and terminal maps)
-visualization.vis_predictions(model, train_inputs, train_values, train_instructions, vis_path, prefix='train_')
-visualization.vis_predictions(model, test_inputs, test_values, test_instructions, vis_path, prefix='test_')
-
-
 
 
 

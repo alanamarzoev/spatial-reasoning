@@ -36,8 +36,8 @@ def main():
     # model_setup = {'lstm': 'full', 'bert-word': 'bert-full', 'bert-word-fixed': 'bert-full'}
     model_setup = {'lstm': 'full'}
     data_splits = {'all-human': {'max_train_human': 1500, 'max_train_synthetic': 0, 'max_test_human': 400, 'max_test_synthetic': 0}, 
-                'all-synthetic':  {'max_train_human': 0, 'max_train_synthetic': 1500, 'max_test_human': 400, 'max_test_synthetic': 0}, 
-                'human-and-synthetic':  {'max_train_human': 1500, 'max_train_synthetic': 1500, 'max_test_human': 400, 'max_test_synthetic': 0}}
+                'all-synthetic':  {'max_train_human': 0, 'max_train_synthetic': 1500, 'max_test_human': 400, 'max_test_synthetic': 0}}
+                # 'human-and-synthetic':  {'max_train_human': 1500, 'max_train_synthetic': 1500, 'max_test_human': 400, 'max_test_synthetic': 0}}
     modes = ['local', 'global']
 
     commands = []
@@ -47,16 +47,16 @@ def main():
         for embed, model in model_setup.items(): 
             for name, split in data_splits.items(): 
                 save_path = '{}-{}-{}'.format(embed, mode, name)
-                cmd = 'cd spatial-reasoning; python3 background.py {} python2 reinforcement.py --annotations both --mode {} --save_path {} \
+                cmd = 'set -ex; cd spatial-reasoning; python3 background.py {} python2 reinforcement.py --annotations both --mode {} --save_path {} \
                     --max_train_human {} --max_test_human {} --max_train_synthetic {} --max_test_synthetic {} \
-                    --epochs {} --model {} --embedding_type {}'.format(save_path, 
+                    --epochs {} --model {} --embedding_type {} </dev/null 1>/dev/null 2>/dev/null'.format(save_path, 
                                                                     mode, 
                                                                     save_path, 
                                                                     split['max_train_human'],
                                                                     split['max_test_human'],
                                                                     split['max_train_synthetic'], 
                                                                     split['max_test_synthetic'], 
-                                                                    1, 
+                                                                    1000, 
                                                                     model, 
                                                                     embed)
                 commands.append(cmd)
@@ -86,12 +86,13 @@ def main():
 
     import pprint 
 
-    # print('spot args: {}'.format(spot_args))
-    # response = client.request_spot_instances(**spot_args)
-    # print('Launched EC2 job - Server response:')
-    # pprint.pprint(response)
-    # print('*****'*5)
-    # spot_request_id = response['SpotInstanceRequests'][0]['SpotInstanceRequestId']
+    print('spot args: {}'.format(spot_args))
+    response = client.request_spot_instances(**spot_args)
+    print('Launched EC2 job - Server response:')
+    pprint.pprint(response)
+    print('*****'*5)
+    spot_request_id = response['SpotInstanceRequests'][0]['SpotInstanceRequestId']
+
     pending = []
     instance_ids = []
     time.sleep(30)
@@ -154,7 +155,7 @@ def main():
             (out, _) = p.communicate()
             out = out.strip()
         
-        os.system('rsync -avze "ssh -o StrictHostKeyChecking=no -i ~/Downloads/{}.pem.txt" --progress --del ~/spatial-reasoning ubuntu@{}:'.format(keypair_name, ip)) 
+        os.system('rsync -avze "ssh -o StrictHostKeyChecking=no -i ~/Downloads/{}.pem.txt" --exclude \'*.git\'--progress --del ~/spatial-reasoning ubuntu@{}:'.format(keypair_name, ip)) 
         cmds = ['python2 -m pip install --user torch', 'python2 -m pip install --user tqdm', 'python2 -m pip install --user torchvision', 'python2 -m pip install --user pytorch-transformers']
         
         for cmd in cmds: 
@@ -163,10 +164,11 @@ def main():
         os.system('echo "{}" > test.sh'.format(commands[i]))
         os.system('rsync -avze "ssh -o StrictHostKeyChecking=no -i ~/Downloads/{}.pem.txt" --progress --del ~/spatial-reasoning/test.sh ubuntu@{}:'.format(keypair_name, ip)) 
         os.system('ssh -o StrictHostKeyChecking=no -i ~/Downloads/{}.pem.txt ubuntu@{} chmod +x test.sh'.format(keypair_name, ip))
-        os.system('ssh -o StrictHostKeyChecking=no -i ~/Downloads/{}.pem.txt ubuntu@{} sudo ./test.sh'.format(keypair_name, ip))
-        
+        os.system('ssh -o StrictHostKeyChecking=no -i ~/Downloads/{}.pem.txt ubuntu@{} ./test.sh'.format(keypair_name, ip))
+        print('DONE1')
         variant = cmd_to_variant[commands[i]]
         tracker[variant] = {'cmd': commands[i], 'ip_addr': ip}
+        print('DONE')
 
     print(tracker)
 
