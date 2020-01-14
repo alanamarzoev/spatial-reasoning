@@ -46,6 +46,8 @@ args = parser.parse_args()
 train_data, test_data = data.load(args.mode, args.annotations, args.max_train_human, args.max_test_human, args.max_train_synthetic, args.max_test_synthetic)
 layout_vocab_size, object_vocab_size, text_vocab_size, text_vocab = data.get_statistics(train_data, test_data)
  
+if not os.path.exists(args.save_path):
+    os.makedirs(args.save_path)
 pickle.dump(text_vocab, open(os.path.join(args.save_path, 'vocab.p'), 'wb') )
 
 print '\n<Main> Converting to tensors'

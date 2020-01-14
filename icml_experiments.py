@@ -86,12 +86,12 @@ def main():
 
     import pprint 
 
-    print('spot args: {}'.format(spot_args))
-    response = client.request_spot_instances(**spot_args)
-    print('Launched EC2 job - Server response:')
-    pprint.pprint(response)
-    print('*****'*5)
-    spot_request_id = response['SpotInstanceRequests'][0]['SpotInstanceRequestId']
+    # print('spot args: {}'.format(spot_args))
+    # response = client.request_spot_instances(**spot_args)
+    # print('Launched EC2 job - Server response:')
+    # pprint.pprint(response)
+    # print('*****'*5)
+    # spot_request_id = response['SpotInstanceRequests'][0]['SpotInstanceRequestId']
 
     pending = []
     instance_ids = []
