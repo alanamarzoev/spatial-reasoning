@@ -56,7 +56,7 @@ def main():
                                                                     split['max_test_human'],
                                                                     split['max_train_synthetic'], 
                                                                     split['max_test_synthetic'], 
-                                                                    1250, 
+                                                                    1, 
                                                                     model, 
                                                                     embed)
                 commands.append(cmd)
@@ -64,7 +64,6 @@ def main():
                 cmd_to_variant[cmd] = save_path 
 
     instance_count = len(modes) * len(model_setup.items()) * len(data_splits.items())
-    instance_count = 1
     client = boto3.client('ec2')
     ec2 = boto3.resource('ec2')
 
@@ -87,7 +86,7 @@ def main():
 
     import pprint 
 
-    print('spot args: {}'.format(spot_args))
+    # print('spot args: {}'.format(spot_args))
     # response = client.request_spot_instances(**spot_args)
     # print('Launched EC2 job - Server response:')
     # pprint.pprint(response)

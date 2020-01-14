@@ -87,9 +87,14 @@ scores = agent.train( train_inputs, train_rewards, train_terminal,
 
 ## make logging directories
 pickle_path = os.path.join(args.save_path, 'pickle')
-utils.mkdir(args.save_path)
-utils.mkdir(pickle_path)
-
+#utils.mkdir(args.save_path)
+#utils.mkdir(pickle_path)
+import os
+if not os.path.exists(args.save_path):
+    os.makedirs(args.save_path)
+import os
+if not os.path.exists(pickle_path):
+    os.makedirs(pickle_path)
 print '\n<Main> Saving model and scores to {}'.format(args.save_path)
 ## save model
 torch.save(model, os.path.join(args.save_path, 'model.pth'))

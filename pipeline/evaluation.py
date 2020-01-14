@@ -14,9 +14,8 @@ import sys
 import sklearn 
 import lsh 
 from lsh import LSH
-
+import os
 from sklearn.metrics.pairwise import cosine_similarity
-from os import path
 
 from torch.nn import functional as F
 
@@ -108,9 +107,10 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
         vocab_text = {}
         for word, ind in text_vocab.items(): 
             vocab_text[ind] = word 
-    
-        no_pickle_path = save_path.strip('pickle')
-        handle = open(os.path.join(no_pickle_path, 'sent_to_ind.pkl'), 'rb')
+        print('save path : {}'.format(save_path)) 
+        no_pickle_path = save_path.replace('pickle', '')
+        print('no pickle: {}'.format(no_pickle_path))
+	handle = open(os.path.join(no_pickle_path, 'sent_to_ind.pkl'), 'rb')
         sent_to_ind = pickle.load(handle)
         ind_to_sent = {}
         for sent, ind in sent_to_ind.items():
@@ -185,12 +185,13 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
         # predictions_shim = np.reshape(predictions_shim, (predictions_shim.shape[0] * predictions_shim.shape[1], predictions_shim.shape[2], predictions_shim.shape[3]))
         # new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
 
-        # import ipdb; ipdb.set_trace()
-
+        # import ipdb; ipdb.set_trace() 
+	if not os.path.exists(save_path):
+		os.makedirs(save_path)
         print('saving to {}'.format(os.path.join(save_path, prefix+'predictions_shim.p')))
         pickle.dump(predictions_shim, open(os.path.join(save_path, prefix+'predictions_shim.p'), 'wb') )
-    else: 
-        save_path = save_path + "/pickle"
+    #else: 
+    #    save_path = save_path + "/pickle"
 
 
     # input_vars = ( Variable(tensor.contiguous()) for tensor in inputs )
@@ -199,7 +200,7 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
     all_predictions = []
     x = int(layouts.shape[0] / 99) 
     for i in range(x):
-        new_inputs = (layouts[i*99:(i+1)*99], objects[i*99:(i+1)*99], all_new_indices[i*99:(i+1)*99])
+        new_inputs = (layouts[i*99:(i+1)*99], objects[i*99:(i+1)*99], indices[i*99:(i+1)*99])
         new_input_vars = ( Variable(tensor.contiguous()) for tensor in new_inputs )
         # print('input vars shape: {}'.format(new_input_vars[2].shape))
         predictions = model(new_input_vars)
@@ -212,7 +213,6 @@ def save_predictions(model, inputs, targets, rewards, terminal, text_vocab, save
     ## convert to numpy arrays for saving to disk
     # predictions = predictions.data.cpu().numpy()
     targets = targets.cpu().numpy()[:len(predictions)]
-
     ## save the predicted and target value maps
     ## as well as info about the MDP and instruction
     pickle.dump(inputs, open(os.path.join(save_path, prefix+'inputs.p'), 'wb') )
